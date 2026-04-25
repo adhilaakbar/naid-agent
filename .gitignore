@@ -1,0 +1,28 @@
+# Secrets — never commit
+.env
+.streamlit/secrets.toml
+data/file_ids.json
+
+# Data files (live in Anthropic Files API, not in repo)
+data/*.parquet
+data/model_inputs/
+library/*.docx
+library/*.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated outputs
+outputs/
+docs/data_inspection.txt
