@@ -112,11 +112,19 @@ class NAIDAgent:
                                         "media_type": source.media_type,
                                     })
 
-            # Fetch any image files Claude created during code execution
+# Fetch any image files Claude created during code execution.
+            # Only PNG/JPG files NOT already seen, and not from our initial uploads.
             saved_images = []
             try:
                 files_list = self.client.beta.files.list()
-                for f in files_list.data:
+                # Sort by created_at so newest are last
+                all_files = list(files_list.data)
+                try:
+                    all_files.sort(key=lambda f: getattr(f, "created_at", "") or "")
+                except Exception:
+                    pass
+
+                for f in all_files:
                     fname = (getattr(f, "filename", "") or "").lower()
                     if not fname.endswith((".png", ".jpg", ".jpeg")):
                         continue
@@ -131,6 +139,11 @@ class NAIDAgent:
                         "data": base64.b64encode(file_bytes).decode(),
                         "media_type": "image/png",
                     })
+
+                # Mark every existing file as seen so future turns only pick up
+                # files that didn't exist yet
+                for f in all_files:
+                    self._fetched_file_ids.add(f.id)
             except Exception as e:
                 print(f"Note: could not fetch generated files: {e}")
 
@@ -138,7 +151,6 @@ class NAIDAgent:
                 "text": "\n".join(text_parts),
                 "images": inline_images + saved_images,
             }
-
 
 if __name__ == "__main__":
     agent = NAIDAgent()
