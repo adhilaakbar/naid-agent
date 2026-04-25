@@ -13,27 +13,118 @@ st.set_page_config(
     layout="wide",
 )
 
-# Sidebar
+# --- Custom CSS for header and styling ---
+st.markdown("""
+<style>
+    /* Top header bar */
+    .naid-header {
+        background-color: #1B3A5E;
+        padding: 16px 24px;
+        margin: -2rem -2rem 1.5rem -2rem;
+        border-bottom: 3px solid #C9A14A;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .naid-header-title {
+        color: #FFFFFF;
+        font-family: 'Times New Roman', Georgia, serif;
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        margin: 0;
+    }
+    .naid-header-subtitle {
+        color: #C9A14A;
+        font-family: 'Helvetica Neue', sans-serif;
+        font-size: 11px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin: 2px 0 0 0;
+    }
+    /* Tighten chat container */
+    .block-container {
+        padding-top: 1rem;
+        max-width: 900px;
+    }
+    /* Sidebar styling */
+    [data-testid="stSidebar"] {
+        background-color: #F4F6F9;
+        border-right: 1px solid #E0E4EA;
+    }
+    [data-testid="stSidebar"] h1 {
+        color: #1B3A5E;
+        font-family: 'Times New Roman', Georgia, serif;
+        font-size: 18px;
+        border-bottom: 2px solid #C9A14A;
+        padding-bottom: 8px;
+    }
+    /* Chat message tweaks */
+    [data-testid="stChatMessageContent"] {
+        font-size: 15px;
+        line-height: 1.6;
+    }
+    /* Chat input */
+    [data-testid="stChatInput"] {
+        border-color: #1B3A5E;
+    }
+</style>
+
+<div class="naid-header">
+    <div>
+        <div class="naid-header-title">NAID Research Agent</div>
+        <div class="naid-header-subtitle">North American Integration & Development Center · UCLA</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 with st.sidebar:
-    st.title("NAID Agent")
+    st.title("About")
     st.markdown(
         "Research assistant for US–Mexico economic integration, "
         "Mexican-origin and Latino economic contributions, and the "
         "labor and trade impacts of immigration and trade policy."
     )
+
     st.markdown("---")
-    st.markdown("**Datasets loaded**")
+    st.markdown("### Datasets")
     st.markdown(
-        "- GTAP labor (county × sector × scenario)\n"
-        "- Diaspora GDP (state, 2023)\n"
-        "- Mexico Export Jobs (state × sector)\n"
-        "- Remittances (US state of origin)"
+        "**GTAP Labor Database**  \n"
+        "County-level employment, baseline + 5 simulation scenarios "
+        "(deportation, USMCA)\n\n"
+        "**Diaspora GDP**  \n"
+        "Mexican-origin & Latino economic contribution by state, 2023\n\n"
+        "**Mexico Export Jobs**  \n"
+        "Jobs in Mexico tied to US-bound exports\n\n"
+        "**Remittances**  \n"
+        "Quarterly & annual flows by US state of origin"
     )
+
     st.markdown("---")
-    if st.button("Reset conversation"):
-        st.session_state.clear()
+    st.markdown("### Try asking")
+    if st.button("📊 Compare TX vs CA on deportation impact", use_container_width=True):
+        st.session_state.queued_prompt = "Compare Texas and California on Latino GDP, Mexican-origin share of state GDP, and projected employment loss under JPM_sim03."
+    if st.button("💸 Top 10 states by remittances", use_container_width=True):
+        st.session_state.queued_prompt = "Make a bar chart of the top 10 US states by remittances to Mexico in 2023."
+    if st.button("🏗️ Most exposed sectors", use_container_width=True):
+        st.session_state.queued_prompt = "Which US industries have the highest share of unauthorized foreign-born workers, and how do they fare under JPM_sim03?"
+    if st.button("📚 What's the methodology?", use_container_width=True):
+        st.session_state.queued_prompt = "Explain how the GTAP labor database was built — sources, location quotients, and the simulation logic."
+
+    st.markdown("---")
+    if st.button("Reset conversation", use_container_width=True):
+        keep = {"queued_prompt"}  # preserve queued prompt
+        for k in list(st.session_state.keys()):
+            if k not in keep:
+                del st.session_state[k]
         st.rerun()
 
+    st.markdown("---")
+    st.caption(
+        "Every answer is sourced. Numerical claims cite the dataset, "
+        "vintage, and known caveats. The agent uses code execution "
+        "for analysis and web search for current events."
+    )
 # Initialize agent and message history once per session
 if "agent" not in st.session_state:
     st.session_state.agent = NAIDAgent()
@@ -49,7 +140,13 @@ for msg in st.session_state.messages:
             st.image(base64.b64decode(img["data"]))
 
 # Handle new input
-if prompt := st.chat_input("Ask a question about US–Mexico economic integration..."):
+# Handle new input
+# If a sidebar button queued a prompt, use it; otherwise wait for chat input
+prompt = st.session_state.pop("queued_prompt", None)
+if not prompt:
+    prompt = st.chat_input("Ask a question about US–Mexico economic integration...")
+
+if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
