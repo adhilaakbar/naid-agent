@@ -13,55 +13,53 @@ st.set_page_config(
     layout="wide",
 )
 
-# --- Custom CSS for header and styling ---
+# --- Custom CSS for styling ---
 st.markdown("""
 <style>
-    /* Force light backgrounds even if user has dark mode */
-    .stApp {
-        background-color: #FFFFFF !important;
-    }
+    /* Force light backgrounds */
+    .stApp { background-color: #FFFFFF !important; }
     [data-testid="stSidebar"] {
         background-color: #F4F6F9 !important;
         border-right: 1px solid #E0E4EA;
     }
-    /* Force readable text everywhere */
-    .stApp, .stApp p, .stApp li, .stApp span, .stApp div {
-        color: #1A1A1A;
-    }
-    /* Top header bar */
-    .naid-header {
-        background-color: #1B3A5E !important;
-        padding: 18px 28px;
-        margin: -2rem -2rem 1.5rem -2rem;
-        border-bottom: 3px solid #C9A14A;
-    }
-    .naid-header-title {
-        color: #FFFFFF !important;
-        font-family: 'Times New Roman', Georgia, serif;
-        font-size: 24px;
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        margin: 0;
-    }
-    .naid-header-subtitle {
-        color: #C9A14A !important;
-        font-family: 'Helvetica Neue', sans-serif;
-        font-size: 11px;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        margin: 4px 0 0 0;
-    }
-    /* Tighten chat container */
+    .stApp, .stApp p, .stApp li, .stApp span { color: #1A1A1A; }
+
+    /* Hide Streamlit's default top padding so our header sits flush */
     .block-container {
-        padding-top: 1rem;
+        padding-top: 0 !important;
         max-width: 900px;
     }
-    /* Sidebar headings */
+
+    /* Header container */
+    div[data-testid="stVerticalBlock"] > div:first-child .naid-header-wrapper {
+        background-color: #1B3A5E;
+        padding: 24px 32px;
+        margin: 0 -2rem 1.5rem -2rem;
+        border-bottom: 3px solid #C9A14A;
+    }
+    .naid-title {
+        color: #FFFFFF;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 26px;
+        font-weight: 600;
+        margin: 0;
+    }
+    .naid-subtitle {
+        color: #C9A14A;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        font-size: 11px;
+        letter-spacing: 2.5px;
+        text-transform: uppercase;
+        margin: 4px 0 0 0;
+        font-weight: 500;
+    }
+
+    /* Sidebar */
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
     [data-testid="stSidebar"] h3 {
         color: #1B3A5E !important;
-        font-family: 'Times New Roman', Georgia, serif;
+        font-family: Georgia, 'Times New Roman', serif;
     }
     [data-testid="stSidebar"] h1 {
         font-size: 20px;
@@ -69,18 +67,20 @@ st.markdown("""
         padding-bottom: 8px;
     }
     [data-testid="stSidebar"] h3 {
-        font-size: 14px;
+        font-size: 13px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 1.2px;
         margin-top: 1.2rem;
     }
-    /* Chat message styling */
+
+    /* Chat */
     [data-testid="stChatMessageContent"] {
         font-size: 15px;
         line-height: 1.65;
         color: #1A1A1A !important;
     }
-    /* Buttons in sidebar */
+
+    /* Sidebar buttons */
     [data-testid="stSidebar"] .stButton > button {
         background-color: #FFFFFF;
         color: #1B3A5E !important;
@@ -88,19 +88,31 @@ st.markdown("""
         font-size: 13px;
         text-align: left;
         font-weight: 500;
+        white-space: normal;
+        line-height: 1.3;
+        padding: 8px 12px;
     }
     [data-testid="stSidebar"] .stButton > button:hover {
         background-color: #1B3A5E;
         color: #FFFFFF !important;
-        border-color: #1B3A5E;
     }
 </style>
-
-<div class="naid-header">
-    <div class="naid-header-title">NAID Research Agent</div>
-    <div class="naid-header-subtitle">North American Integration & Development Center · UCLA</div>
-</div>
 """, unsafe_allow_html=True)
+
+# Header — use a styled HTML block at the top of the main column
+st.markdown(
+    '<div style="background-color:#1B3A5E; padding:24px 32px; '
+    'margin:-1rem -2rem 1.5rem -2rem; border-bottom:3px solid #C9A14A;">'
+    '<div style="color:#FFFFFF; font-family:Georgia, serif; '
+    'font-size:26px; font-weight:600; line-height:1.2;">'
+    'NAID Research Agent</div>'
+    '<div style="color:#C9A14A; font-family:Helvetica, sans-serif; '
+    'font-size:11px; letter-spacing:2.5px; text-transform:uppercase; '
+    'margin-top:5px; font-weight:500;">'
+    'North American Integration & Development Center · UCLA</div>'
+    '</div>',
+    unsafe_allow_html=True
+)
 
 with st.sidebar:
     st.title("About")
