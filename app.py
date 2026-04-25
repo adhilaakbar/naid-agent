@@ -43,7 +43,8 @@ if "agent" not in st.session_state:
 import base64
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        safe_text = msg["content"].replace("$", "\\$") if msg["role"] == "assistant" else msg["content"]
+        st.markdown(safe_text)
         for img in msg.get("images", []):
             st.image(base64.b64decode(img["data"]))
 
@@ -60,7 +61,9 @@ if prompt := st.chat_input("Ask a question about US–Mexico economic integratio
             except Exception as e:
                 response = {"text": f"Error: {e}", "images": []}
 
-        st.markdown(response["text"])
+        # Escape dollar signs so Streamlit doesn't render them as LaTeX math
+        safe_text = response["text"].replace("$", "\\$")
+        st.markdown(safe_text)
         for img in response["images"]:
             import base64
             st.image(base64.b64decode(img["data"]))
