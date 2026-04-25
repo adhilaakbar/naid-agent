@@ -4,10 +4,22 @@ NAID Agent — core conversation loop.
 Reuses one container session per agent instance so files persist across turns
 without re-attaching them (which would blow rate limits).
 """
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
+# When deployed on Streamlit Cloud, the API key comes from st.secrets
+# rather than .env. Fall through to that if the env var isn't set.
+if not os.environ.get("ANTHROPIC_API_KEY"):
+    try:
+        import streamlit as st
+        if "ANTHROPIC_API_KEY" in st.secrets:
+            os.environ["ANTHROPIC_API_KEY"] = st.secrets["ANTHROPIC_API_KEY"]
+    except Exception:
+        pass
+
 import json
+import base64
 from pathlib import Path
 from anthropic import Anthropic
 from agent.system_prompt import SYSTEM_PROMPT
@@ -20,11 +32,18 @@ MAX_TOKENS = 8000
 
 
 def load_file_ids():
-    if not FILE_IDS_PATH.exists():
-        raise FileNotFoundError(
-            f"{FILE_IDS_PATH} not found. Run scripts/upload_files.py first."
-        )
-    return json.loads(FILE_IDS_PATH.read_text())
+    """Load file IDs from local JSON or Streamlit secrets."""
+    if FILE_IDS_PATH.exists():
+        return json.loads(FILE_IDS_PATH.read_text())
+    try:
+        import streamlit as st
+        if "FILE_IDS" in st.secrets:
+            return dict(st.secrets["FILE_IDS"])
+    except Exception:
+        pass
+    raise FileNotFoundError(
+        f"{FILE_IDS_PATH} not found and no FILE_IDS in Streamlit secrets."
+    )
 
 
 class NAIDAgent:
@@ -32,7 +51,7 @@ class NAIDAgent:
         self.client = Anthropic()
         self.file_ids = load_file_ids()
         self.messages = []
-        self.container_id = None  # populated on first response
+        self.container_id = None
         self._fetched_file_ids = set()
 
     def chat(self, user_message):
@@ -61,13 +80,11 @@ class NAIDAgent:
                 "messages": self.messages,
             }
 
-            # Reuse the same container across turns once we have its id
             if self.container_id is not None:
                 request_kwargs["container"] = self.container_id
 
             response = self.client.beta.messages.create(**request_kwargs)
 
-            # Capture container id from the first response so future turns reuse it
             if self.container_id is None and getattr(response, "container", None):
                 self.container_id = response.container.id
 
@@ -76,7 +93,7 @@ class NAIDAgent:
             if response.stop_reason == "tool_use":
                 continue
 
-# Collect text from the final response
+            # Collect text and inline images from the final response
             text_parts = []
             inline_images = []
             for block in response.content:
@@ -95,10 +112,7 @@ class NAIDAgent:
                                         "media_type": source.media_type,
                                     })
 
-            # Also fetch any image files the agent saved to the container
-# Fetch any image files Claude created during code execution.
-            # Files created via the code execution tool show up in the Files API
-            # alongside the ones we uploaded.
+            # Fetch any image files Claude created during code execution
             saved_images = []
             try:
                 files_list = self.client.beta.files.list()
@@ -108,15 +122,13 @@ class NAIDAgent:
                         continue
                     if f.id in self._fetched_file_ids:
                         continue
-                    # Skip files we uploaded ourselves
                     if f.id in self.file_ids.values():
                         self._fetched_file_ids.add(f.id)
                         continue
                     self._fetched_file_ids.add(f.id)
                     file_bytes = self.client.beta.files.download(file_id=f.id).read()
-                    import base64 as _b64
                     saved_images.append({
-                        "data": _b64.b64encode(file_bytes).decode(),
+                        "data": base64.b64encode(file_bytes).decode(),
                         "media_type": "image/png",
                     })
             except Exception as e:
@@ -126,6 +138,8 @@ class NAIDAgent:
                 "text": "\n".join(text_parts),
                 "images": inline_images + saved_images,
             }
+
+
 if __name__ == "__main__":
     agent = NAIDAgent()
     print("NAID Agent ready. Type 'exit' to quit.\n")
