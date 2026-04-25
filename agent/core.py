@@ -113,11 +113,15 @@ class NAIDAgent:
                                     })
 
 # Fetch any image files Claude created during code execution.
-            # Only PNG/JPG files NOT already seen, and not from our initial uploads.
+            # Dedupe by content hash — Claude sometimes saves the same chart
+            # multiple times during multi-step code execution.
+            import hashlib
+
             saved_images = []
+            seen_hashes = set()
+
             try:
                 files_list = self.client.beta.files.list()
-                # Sort by created_at so newest are last
                 all_files = list(files_list.data)
                 try:
                     all_files.sort(key=lambda f: getattr(f, "created_at", "") or "")
@@ -134,24 +138,44 @@ class NAIDAgent:
                         self._fetched_file_ids.add(f.id)
                         continue
                     self._fetched_file_ids.add(f.id)
+
                     file_bytes = self.client.beta.files.download(file_id=f.id).read()
+
+                    # Skip if we've already seen identical bytes this turn
+                    h = hashlib.sha256(file_bytes).hexdigest()
+                    if h in seen_hashes:
+                        continue
+                    seen_hashes.add(h)
+                    # Also persist the hash so future turns won't re-show it
+                    self._fetched_file_ids.add(h)
+
                     saved_images.append({
                         "data": base64.b64encode(file_bytes).decode(),
                         "media_type": "image/png",
                     })
 
-                # Mark every existing file as seen so future turns only pick up
-                # files that didn't exist yet
                 for f in all_files:
                     self._fetched_file_ids.add(f.id)
             except Exception as e:
                 print(f"Note: could not fetch generated files: {e}")
 
+            # Also dedupe inline images by content
+            unique_inline = []
+            for img in inline_images:
+                try:
+                    img_bytes = base64.b64decode(img["data"])
+                    h = hashlib.sha256(img_bytes).hexdigest()
+                    if h in seen_hashes:
+                        continue
+                    seen_hashes.add(h)
+                    unique_inline.append(img)
+                except Exception:
+                    unique_inline.append(img)
+
             return {
                 "text": "\n".join(text_parts),
-                "images": inline_images + saved_images,
+                "images": unique_inline + saved_images,
             }
-
 if __name__ == "__main__":
     agent = NAIDAgent()
     print("NAID Agent ready. Type 'exit' to quit.\n")
