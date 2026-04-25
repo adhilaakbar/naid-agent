@@ -4,6 +4,7 @@ NAID Agent — Streamlit chat UI.
 Run with:
     streamlit run app.py
 """
+import base64
 import streamlit as st
 from agent.core import NAIDAgent
 
@@ -22,31 +23,16 @@ st.markdown("""
         background-color: #F4F6F9 !important;
         border-right: 1px solid #E0E4EA;
     }
-.stApp p, .stApp li, .stApp span { color: #1A1A1A; }
-.stApp [data-testid="stChatMessageContent"] { color: #1A1A1A !important; }
-            
+    .stApp p, .stApp li, .stApp span { color: #1A1A1A; }
+    .stApp [data-testid="stChatMessageContent"] { color: #1A1A1A !important; }
+
     /* Hide Streamlit's default top padding so our header sits flush */
     .block-container {
         padding-top: 0 !important;
         max-width: 900px;
     }
 
-    /* Header container */
- '<div style="background-color:#1B3A5E; padding:24px 32px; '
-    'margin:-1rem -2rem 1.5rem -2rem; border-bottom:3px solid #C9A14A;">'
-    '<h1 style="color:#FFFFFF !important; font-family:Georgia, serif; '
-    'font-size:26px; font-weight:600; line-height:1.2; margin:0; '
-    'padding:0; background:transparent;">'
-    'NAID Research Agent</h1>'
-    '<div style="color:#C9A14A; font-family:Helvetica, sans-serif; '
-    'font-size:11px; letter-spacing:2.5px; text-transform:uppercase; '
-    'margin-top:5px; font-weight:500;">'
-    'North American Integration &amp; Development Center · UCLA</div>'
-    '</div>',
-    unsafe_allow_html=True
-)
-
-    /* Sidebar */
+    /* Sidebar headings */
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
     [data-testid="stSidebar"] h3 {
@@ -69,7 +55,6 @@ st.markdown("""
     [data-testid="stChatMessageContent"] {
         font-size: 15px;
         line-height: 1.65;
-        color: #1A1A1A !important;
     }
 
     /* Sidebar buttons */
@@ -91,21 +76,23 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Header — use a styled HTML block at the top of the main column
+# --- Header bar ---
 st.markdown(
     '<div style="background-color:#1B3A5E; padding:24px 32px; '
     'margin:-1rem -2rem 1.5rem -2rem; border-bottom:3px solid #C9A14A;">'
-    '<div style="color:#FFFFFF; font-family:Georgia, serif; '
-    'font-size:26px; font-weight:600; line-height:1.2;">'
-    'NAID Research Agent</div>'
+    '<h1 style="color:#FFFFFF !important; font-family:Georgia, serif; '
+    'font-size:26px; font-weight:600; line-height:1.2; margin:0; '
+    'padding:0; background:transparent; border:none;">'
+    'NAID Research Agent</h1>'
     '<div style="color:#C9A14A; font-family:Helvetica, sans-serif; '
     'font-size:11px; letter-spacing:2.5px; text-transform:uppercase; '
     'margin-top:5px; font-weight:500;">'
-    'North American Integration & Development Center · UCLA</div>'
+    'North American Integration &amp; Development Center · UCLA</div>'
     '</div>',
     unsafe_allow_html=True
 )
 
+# --- Sidebar ---
 with st.sidebar:
     st.title("About")
     st.markdown(
@@ -141,7 +128,7 @@ with st.sidebar:
 
     st.markdown("---")
     if st.button("Reset conversation", use_container_width=True):
-        keep = {"queued_prompt"}  # preserve queued prompt
+        keep = {"queued_prompt"}
         for k in list(st.session_state.keys()):
             if k not in keep:
                 del st.session_state[k]
@@ -153,22 +140,24 @@ with st.sidebar:
         "vintage, and known caveats. The agent uses code execution "
         "for analysis and web search for current events."
     )
-# Initialize agent and message history once per session
+
+# --- Initialize agent and message history once per session ---
 if "agent" not in st.session_state:
     st.session_state.agent = NAIDAgent()
     st.session_state.messages = []
 
-# Render chat history
-import base64
+# --- Render chat history ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        safe_text = msg["content"].replace("$", "\\$") if msg["role"] == "assistant" else msg["content"]
+        if msg["role"] == "assistant":
+            safe_text = msg["content"].replace("$", "\\$")
+        else:
+            safe_text = msg["content"]
         st.markdown(safe_text)
         for img in msg.get("images", []):
             st.image(base64.b64decode(img["data"]))
 
-# Handle new input
-# Handle new input
+# --- Handle new input ---
 # If a sidebar button queued a prompt, use it; otherwise wait for chat input
 prompt = st.session_state.pop("queued_prompt", None)
 if not prompt:
@@ -190,7 +179,6 @@ if prompt:
         safe_text = response["text"].replace("$", "\\$")
         st.markdown(safe_text)
         for img in response["images"]:
-            import base64
             st.image(base64.b64decode(img["data"]))
 
     st.session_state.messages.append({
