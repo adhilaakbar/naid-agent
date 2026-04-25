@@ -16,65 +16,89 @@ st.set_page_config(
 # --- Custom CSS for header and styling ---
 st.markdown("""
 <style>
+    /* Force light backgrounds even if user has dark mode */
+    .stApp {
+        background-color: #FFFFFF !important;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #F4F6F9 !important;
+        border-right: 1px solid #E0E4EA;
+    }
+    /* Force readable text everywhere */
+    .stApp, .stApp p, .stApp li, .stApp span, .stApp div {
+        color: #1A1A1A;
+    }
     /* Top header bar */
     .naid-header {
-        background-color: #1B3A5E;
-        padding: 16px 24px;
+        background-color: #1B3A5E !important;
+        padding: 18px 28px;
         margin: -2rem -2rem 1.5rem -2rem;
         border-bottom: 3px solid #C9A14A;
-        display: flex;
-        align-items: center;
-        gap: 16px;
     }
     .naid-header-title {
-        color: #FFFFFF;
+        color: #FFFFFF !important;
         font-family: 'Times New Roman', Georgia, serif;
-        font-size: 22px;
+        font-size: 24px;
         font-weight: 600;
         letter-spacing: 0.5px;
         margin: 0;
     }
     .naid-header-subtitle {
-        color: #C9A14A;
+        color: #C9A14A !important;
         font-family: 'Helvetica Neue', sans-serif;
         font-size: 11px;
         letter-spacing: 2px;
         text-transform: uppercase;
-        margin: 2px 0 0 0;
+        margin: 4px 0 0 0;
     }
     /* Tighten chat container */
     .block-container {
         padding-top: 1rem;
         max-width: 900px;
     }
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
-        background-color: #F4F6F9;
-        border-right: 1px solid #E0E4EA;
+    /* Sidebar headings */
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3 {
+        color: #1B3A5E !important;
+        font-family: 'Times New Roman', Georgia, serif;
     }
     [data-testid="stSidebar"] h1 {
-        color: #1B3A5E;
-        font-family: 'Times New Roman', Georgia, serif;
-        font-size: 18px;
+        font-size: 20px;
         border-bottom: 2px solid #C9A14A;
         padding-bottom: 8px;
     }
-    /* Chat message tweaks */
+    [data-testid="stSidebar"] h3 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 1.2rem;
+    }
+    /* Chat message styling */
     [data-testid="stChatMessageContent"] {
         font-size: 15px;
-        line-height: 1.6;
+        line-height: 1.65;
+        color: #1A1A1A !important;
     }
-    /* Chat input */
-    [data-testid="stChatInput"] {
+    /* Buttons in sidebar */
+    [data-testid="stSidebar"] .stButton > button {
+        background-color: #FFFFFF;
+        color: #1B3A5E !important;
+        border: 1px solid #1B3A5E;
+        font-size: 13px;
+        text-align: left;
+        font-weight: 500;
+    }
+    [data-testid="stSidebar"] .stButton > button:hover {
+        background-color: #1B3A5E;
+        color: #FFFFFF !important;
         border-color: #1B3A5E;
     }
 </style>
 
 <div class="naid-header">
-    <div>
-        <div class="naid-header-title">NAID Research Agent</div>
-        <div class="naid-header-subtitle">North American Integration & Development Center · UCLA</div>
-    </div>
+    <div class="naid-header-title">NAID Research Agent</div>
+    <div class="naid-header-subtitle">North American Integration & Development Center · UCLA</div>
 </div>
 """, unsafe_allow_html=True)
 
