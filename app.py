@@ -22,8 +22,9 @@ st.markdown("""
         background-color: #F4F6F9 !important;
         border-right: 1px solid #E0E4EA;
     }
-    .stApp, .stApp p, .stApp li, .stApp span { color: #1A1A1A; }
-
+.stApp p, .stApp li, .stApp span { color: #1A1A1A; }
+.stApp [data-testid="stChatMessageContent"] { color: #1A1A1A !important; }
+            
     /* Hide Streamlit's default top padding so our header sits flush */
     .block-container {
         padding-top: 0 !important;
@@ -31,28 +32,19 @@ st.markdown("""
     }
 
     /* Header container */
-    div[data-testid="stVerticalBlock"] > div:first-child .naid-header-wrapper {
-        background-color: #1B3A5E;
-        padding: 24px 32px;
-        margin: 0 -2rem 1.5rem -2rem;
-        border-bottom: 3px solid #C9A14A;
-    }
-    .naid-title {
-        color: #FFFFFF;
-        font-family: Georgia, 'Times New Roman', serif;
-        font-size: 26px;
-        font-weight: 600;
-        margin: 0;
-    }
-    .naid-subtitle {
-        color: #C9A14A;
-        font-family: 'Helvetica Neue', Arial, sans-serif;
-        font-size: 11px;
-        letter-spacing: 2.5px;
-        text-transform: uppercase;
-        margin: 4px 0 0 0;
-        font-weight: 500;
-    }
+ '<div style="background-color:#1B3A5E; padding:24px 32px; '
+    'margin:-1rem -2rem 1.5rem -2rem; border-bottom:3px solid #C9A14A;">'
+    '<h1 style="color:#FFFFFF !important; font-family:Georgia, serif; '
+    'font-size:26px; font-weight:600; line-height:1.2; margin:0; '
+    'padding:0; background:transparent;">'
+    'NAID Research Agent</h1>'
+    '<div style="color:#C9A14A; font-family:Helvetica, sans-serif; '
+    'font-size:11px; letter-spacing:2.5px; text-transform:uppercase; '
+    'margin-top:5px; font-weight:500;">'
+    'North American Integration &amp; Development Center · UCLA</div>'
+    '</div>',
+    unsafe_allow_html=True
+)
 
     /* Sidebar */
     [data-testid="stSidebar"] h1,
