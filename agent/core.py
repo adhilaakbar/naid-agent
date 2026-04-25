@@ -172,9 +172,15 @@ class NAIDAgent:
                 except Exception:
                     unique_inline.append(img)
 
+# Keep only the last image — Claude often regenerates the same
+            # chart multiple times during code iteration. The final one is
+            # the polished version.
+            all_images = unique_inline + saved_images
+            final_images = all_images[-1:] if all_images else []
+
             return {
                 "text": "\n".join(text_parts),
-                "images": unique_inline + saved_images,
+                "images": final_images,
             }
 if __name__ == "__main__":
     agent = NAIDAgent()
