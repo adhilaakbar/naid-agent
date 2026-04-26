@@ -20,6 +20,7 @@ if not os.environ.get("ANTHROPIC_API_KEY"):
 
 import json
 import base64
+import hashlib
 from pathlib import Path
 from anthropic import Anthropic
 from agent.system_prompt import SYSTEM_PROMPT
@@ -27,7 +28,7 @@ from agent.system_prompt import SYSTEM_PROMPT
 PROJECT_ROOT = Path(__file__).parent.parent
 FILE_IDS_PATH = PROJECT_ROOT / "data" / "file_ids.json"
 
-MODEL = "claude-sonnet-4-5"
+MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 8000
 
 
@@ -53,8 +54,26 @@ class NAIDAgent:
         self.messages = []
         self.container_id = None
         self._fetched_file_ids = set()
+        self.last_response = {"text": "", "images": []}
 
-    def chat(self, user_message):
+    def _build_request_kwargs(self):
+        kwargs = {
+            "model": MODEL,
+            "max_tokens": MAX_TOKENS,
+            "system": SYSTEM_PROMPT,
+            "tools": [
+                {"type": "code_execution_20250825", "name": "code_execution"},
+                {"type": "web_search_20250305", "name": "web_search", "max_uses": 5},
+            ],
+            "betas": ["code-execution-2025-08-25", "files-api-2025-04-14"],
+            "messages": self.messages,
+        }
+        if self.container_id is not None:
+            kwargs["container"] = self.container_id
+        return kwargs
+
+    def chat_stream(self, user_message):
+        """Stream a turn. Yields text chunks; populates self.last_response when done."""
         # First user turn: attach all files. Later turns: just text.
         if not self.messages:
             user_content = [
@@ -67,40 +86,44 @@ class NAIDAgent:
 
         self.messages.append({"role": "user", "content": user_content})
 
+        text_parts = []
+        inline_images = []
+        code_exec_happened = False
+
         while True:
-            request_kwargs = {
-                "model": MODEL,
-                "max_tokens": MAX_TOKENS,
-                "system": SYSTEM_PROMPT,
-                "tools": [
-                    {"type": "code_execution_20250825", "name": "code_execution"},
-                    {"type": "web_search_20250305", "name": "web_search", "max_uses": 5},
-                ],
-                "betas": ["code-execution-2025-08-25", "files-api-2025-04-14"],
-                "messages": self.messages,
-            }
+            request_kwargs = self._build_request_kwargs()
 
-            if self.container_id is not None:
-                request_kwargs["container"] = self.container_id
-
-            response = self.client.beta.messages.create(**request_kwargs)
+            with self.client.beta.messages.stream(**request_kwargs) as stream:
+                for event in stream:
+                    etype = getattr(event, "type", "")
+                    if etype == "content_block_delta":
+                        delta = getattr(event, "delta", None)
+                        if delta and getattr(delta, "type", "") == "text_delta":
+                            chunk = getattr(delta, "text", "")
+                            if chunk:
+                                yield chunk
+                    elif etype == "content_block_start":
+                        block = getattr(event, "content_block", None)
+                        btype = getattr(block, "type", "") if block else ""
+                        if btype == "server_tool_use":
+                            name = getattr(block, "name", "")
+                            if name == "code_execution":
+                                yield "\n\n_Running code…_\n\n"
+                            elif name == "web_search":
+                                yield "\n\n_Searching the web…_\n\n"
+                response = stream.get_final_message()
 
             if self.container_id is None and getattr(response, "container", None):
                 self.container_id = response.container.id
 
             self.messages.append({"role": "assistant", "content": response.content})
 
-            if response.stop_reason == "tool_use":
-                continue
-
-            # Collect text and inline images from the final response
-            text_parts = []
-            inline_images = []
             for block in response.content:
                 if hasattr(block, "text") and block.text:
                     text_parts.append(block.text)
                 btype = getattr(block, "type", "") or ""
                 if btype.endswith("code_execution_tool_result"):
+                    code_exec_happened = True
                     content = getattr(block, "content", None)
                     if content and hasattr(content, "content"):
                         for item in content.content:
@@ -112,14 +135,17 @@ class NAIDAgent:
                                         "media_type": source.media_type,
                                     })
 
-# Fetch any image files Claude created during code execution.
-            # Dedupe by content hash — Claude sometimes saves the same chart
-            # multiple times during multi-step code execution.
-            import hashlib
+            if response.stop_reason == "tool_use":
+                continue
+            break
 
-            saved_images = []
-            seen_hashes = set()
+        # Only scan generated files when code execution actually ran this turn.
+        # Skipping this on text-only turns saves a full account-wide files.list()
+        # round-trip plus N downloads.
+        saved_images = []
+        seen_hashes = set()
 
+        if code_exec_happened:
             try:
                 files_list = self.client.beta.files.list()
                 all_files = list(files_list.data)
@@ -140,13 +166,10 @@ class NAIDAgent:
                     self._fetched_file_ids.add(f.id)
 
                     file_bytes = self.client.beta.files.download(file_id=f.id).read()
-
-                    # Skip if we've already seen identical bytes this turn
                     h = hashlib.sha256(file_bytes).hexdigest()
                     if h in seen_hashes:
                         continue
                     seen_hashes.add(h)
-                    # Also persist the hash so future turns won't re-show it
                     self._fetched_file_ids.add(h)
 
                     saved_images.append({
@@ -159,29 +182,33 @@ class NAIDAgent:
             except Exception as e:
                 print(f"Note: could not fetch generated files: {e}")
 
-            # Also dedupe inline images by content
-            unique_inline = []
-            for img in inline_images:
-                try:
-                    img_bytes = base64.b64decode(img["data"])
-                    h = hashlib.sha256(img_bytes).hexdigest()
-                    if h in seen_hashes:
-                        continue
-                    seen_hashes.add(h)
-                    unique_inline.append(img)
-                except Exception:
-                    unique_inline.append(img)
+        unique_inline = []
+        for img in inline_images:
+            try:
+                img_bytes = base64.b64decode(img["data"])
+                h = hashlib.sha256(img_bytes).hexdigest()
+                if h in seen_hashes:
+                    continue
+                seen_hashes.add(h)
+                unique_inline.append(img)
+            except Exception:
+                unique_inline.append(img)
 
-# Keep only the last image — Claude often regenerates the same
-            # chart multiple times during code iteration. The final one is
-            # the polished version.
-            all_images = unique_inline + saved_images
-            final_images = all_images[-1:] if all_images else []
+        all_images = unique_inline + saved_images
+        final_images = all_images[-1:] if all_images else []
 
-            return {
-                "text": "\n".join(text_parts),
-                "images": final_images,
-            }
+        self.last_response = {
+            "text": "\n".join(text_parts),
+            "images": final_images,
+        }
+
+    def chat(self, user_message):
+        """Non-streaming wrapper for CLI / scripted use."""
+        for _ in self.chat_stream(user_message):
+            pass
+        return self.last_response
+
+
 if __name__ == "__main__":
     agent = NAIDAgent()
     print("NAID Agent ready. Type 'exit' to quit.\n")
@@ -196,7 +223,9 @@ if __name__ == "__main__":
         if not user:
             continue
         try:
-            answer = agent.chat(user)
-            print(f"\nAgent: {answer}\n")
+            print("\nAgent: ", end="", flush=True)
+            for chunk in agent.chat_stream(user):
+                print(chunk, end="", flush=True)
+            print("\n")
         except Exception as e:
             print(f"\nError: {e}\n")

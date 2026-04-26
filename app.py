@@ -168,15 +168,21 @@ if prompt:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            try:
-                response = st.session_state.agent.chat(prompt)
-            except Exception as e:
-                response = {"text": f"Error: {e}", "images": []}
+        text_placeholder = st.empty()
+        text_placeholder.markdown("_Thinking…_")
+        accumulated = ""
+        try:
+            for chunk in st.session_state.agent.chat_stream(prompt):
+                accumulated += chunk
+                # Escape dollar signs so Streamlit doesn't render them as LaTeX math
+                text_placeholder.markdown(accumulated.replace("$", "\\$"))
+            response = st.session_state.agent.last_response
+            # Replace the streamed (status-augmented) text with the clean final text
+            text_placeholder.markdown(response["text"].replace("$", "\\$"))
+        except Exception as e:
+            response = {"text": f"Error: {e}", "images": []}
+            text_placeholder.markdown(f"Error: {e}")
 
-        # Escape dollar signs so Streamlit doesn't render them as LaTeX math
-        safe_text = response["text"].replace("$", "\\$")
-        st.markdown(safe_text)
         for img in response["images"]:
             st.image(base64.b64decode(img["data"]))
 
