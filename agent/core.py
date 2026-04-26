@@ -19,6 +19,7 @@ if not os.environ.get("ANTHROPIC_API_KEY"):
         pass
 
 import json
+import time
 import base64
 import hashlib
 from pathlib import Path
@@ -56,6 +57,18 @@ class NAIDAgent:
         self._fetched_file_ids = set()
         self.last_response = {"text": "", "images": []}
 
+        # Pre-populate _fetched_file_ids with every file that already exists
+        # in the account at startup. This prevents the first code-execution
+        # turn from downloading every leftover PNG from previous sessions.
+        try:
+            t = time.time()
+            existing = self.client.beta.files.list()
+            for f in existing.data:
+                self._fetched_file_ids.add(f.id)
+            print(f"[init] pre-loaded {len(self._fetched_file_ids)} existing file IDs in {time.time()-t:.1f}s")
+        except Exception as e:
+            print(f"[init] could not pre-load existing file IDs: {e}")
+
     def _build_request_kwargs(self):
         # Cache_control markers turn repeat input into ~10%-weighted cached reads,
         # which keeps us under the 30k-input-tokens/min rate limit on long sessions.
@@ -87,6 +100,9 @@ class NAIDAgent:
 
     def chat_stream(self, user_message):
         """Stream a turn. Yields text chunks; populates self.last_response when done."""
+        t_turn = time.time()
+        print(f"\n[timing] === new turn started ===")
+
         # First user turn: attach all files. Later turns: just text.
         # The first message gets a cache breakpoint so subsequent turns can
         # cache-read the file-upload list instead of re-sending it as fresh input.
@@ -108,8 +124,11 @@ class NAIDAgent:
         text_parts = []
         inline_images = []
         code_exec_happened = False
+        turn_count = 0
 
         while True:
+            turn_count += 1
+            t_stream = time.time()
             request_kwargs = self._build_request_kwargs()
 
             with self.client.beta.messages.stream(**request_kwargs) as stream:
@@ -131,6 +150,8 @@ class NAIDAgent:
                             elif name == "web_search":
                                 yield "\n\n_Searching the web…_\n\n"
                 response = stream.get_final_message()
+
+            print(f"[timing] round {turn_count}: stream took {time.time()-t_stream:.1f}s, stop_reason={response.stop_reason}")
 
             if self.container_id is None and getattr(response, "container", None):
                 self.container_id = response.container.id
@@ -155,24 +176,31 @@ class NAIDAgent:
                                     })
 
             if response.stop_reason == "tool_use":
+                yield "\n_Processing results…_\n"
                 continue
             break
 
+        print(f"[timing] total model rounds: {turn_count}, inline images captured: {len(inline_images)}")
+
         # Only scan generated files when code execution actually ran this turn.
-        # Skipping this on text-only turns saves a full account-wide files.list()
-        # round-trip plus N downloads.
+        # Because we pre-populated _fetched_file_ids at startup, this loop
+        # will only download files genuinely created by this session.
         saved_images = []
         seen_hashes = set()
 
         if code_exec_happened:
             try:
+                t_list = time.time()
                 files_list = self.client.beta.files.list()
                 all_files = list(files_list.data)
+                print(f"[timing] files.list() took {time.time()-t_list:.1f}s, returned {len(all_files)} files")
+
                 try:
                     all_files.sort(key=lambda f: getattr(f, "created_at", "") or "")
                 except Exception:
                     pass
 
+                download_count = 0
                 for f in all_files:
                     fname = (getattr(f, "filename", "") or "").lower()
                     if not fname.endswith((".png", ".jpg", ".jpeg")):
@@ -184,7 +212,11 @@ class NAIDAgent:
                         continue
                     self._fetched_file_ids.add(f.id)
 
+                    t_dl = time.time()
                     file_bytes = self.client.beta.files.download(file_id=f.id).read()
+                    print(f"[timing] downloaded {f.id} ({len(file_bytes)} bytes) in {time.time()-t_dl:.1f}s")
+                    download_count += 1
+
                     h = hashlib.sha256(file_bytes).hexdigest()
                     if h in seen_hashes:
                         continue
@@ -195,6 +227,8 @@ class NAIDAgent:
                         "data": base64.b64encode(file_bytes).decode(),
                         "media_type": "image/png",
                     })
+
+                print(f"[timing] downloaded {download_count} new image files this turn")
 
                 for f in all_files:
                     self._fetched_file_ids.add(f.id)
@@ -220,6 +254,8 @@ class NAIDAgent:
             "text": "\n".join(text_parts),
             "images": final_images,
         }
+
+        print(f"[timing] === turn complete in {time.time()-t_turn:.1f}s total ===\n")
 
     def chat(self, user_message):
         """Non-streaming wrapper for CLI / scripted use."""
