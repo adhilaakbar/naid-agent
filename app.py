@@ -88,7 +88,10 @@ st.markdown("""
    .stApp p, .stApp li, .stApp span:not([style*="color"]) { color: #1A1A1A; }
     .stApp [data-testid="stChatMessageContent"] { color: #1A1A1A !important; }
 
-    /* Hide Streamlit's default top padding so our header sits flush */
+    /* Hide Streamlit's default top toolbar so our banner sits flush
+       and isn't half-hidden behind the deploy/share buttons */
+    header[data-testid="stHeader"] { display: none !important; }
+
     .block-container {
         padding-top: 0 !important;
         max-width: 900px;
@@ -139,9 +142,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Header bar ---
+# Spans the full viewport: negative left/right margins of (50% - 50vw) break
+# out of the 900px-capped block-container and stretch edge-to-edge.
 st.markdown(
     '<div style="background-color:#1B3A5E; padding:24px 32px; '
-    'margin:-1rem -2rem 1.5rem -2rem; border-bottom:3px solid #C9A14A;">'
+    'margin-left:calc(50% - 50vw); margin-right:calc(50% - 50vw); '
+    'margin-top:0; margin-bottom:1.5rem; '
+    'border-bottom:3px solid #C9A14A;">'
+    '<div style="max-width:900px; margin:0 auto;">'
     '<div style="color:#FFFFFF; font-family:Georgia, serif; '
     'font-size:26px; font-weight:600; line-height:1.2;">'
     '<span style="color:#FFFFFF;">NAID Research Agent</span></div>'
@@ -149,6 +157,7 @@ st.markdown(
     'font-size:11px; letter-spacing:2.5px; text-transform:uppercase; '
     'margin-top:5px; font-weight:500;">'
     '<span style="color:#C9A14A;">North American Integration &amp; Development Center · UCLA</span></div>'
+    '</div>'
     '</div>',
     unsafe_allow_html=True
 )
