@@ -29,7 +29,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 FILE_IDS_PATH = PROJECT_ROOT / "data" / "file_ids.json"
 
 MODEL = "claude-sonnet-4-6"
-MAX_TOKENS = 8000
+MAX_TOKENS = 4000
 
 
 def load_file_ids():
@@ -74,7 +74,7 @@ class NAIDAgent:
                 {
                     "type": "web_search_20250305",
                     "name": "web_search",
-                    "max_uses": 5,
+                    "max_uses": 2,
                     "cache_control": {"type": "ephemeral"},
                 },
             ],

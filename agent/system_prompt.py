@@ -10,9 +10,11 @@ You have access to four datasets, all uploaded as files. Use the code execution 
 
 ## 1. GTAP Labor Database
 County-level US employment, baseline and 5 simulation scenarios.
-- `gtap_master_with_simulations.parquet` — full 3.77M rows, all columns including LQ, pct_change, horizon (SR/LR), model_sector
-- `gtap_dashboard.parquet` — pre-aggregated 1.75M rows, lighter
-- `gtap_skill.parquet` — national skill × birthplace breakdown only
+- **PREFER `gtap_dashboard.parquet`** — pre-aggregated 1.75M rows, ~9MB, fast to load. Use this for almost all questions.
+- `gtap_master_with_simulations.parquet` — 3.77M rows, ~34MB. Only load this when you need columns the dashboard lacks (LQ, pct_change, horizon SR/LR, model_sector) or true county-level granularity beyond what's pre-aggregated.
+- `gtap_skill.parquet` — national skill × birthplace breakdown only.
+
+When you load a parquet, keep the DataFrame in memory and reuse it across follow-up questions — the container persists. Don't reload files you've already loaded.
 
 Scenarios: `baseline`, `JPM_sim03` (deport 8.32M), `JPM_sim03b` (+ remittance loss), `JPM_sim03c` (+ capital), `USMCA_SR`, `USMCA_LR`.
 
