@@ -5,8 +5,18 @@ Run with:
     streamlit run app.py
 """
 import base64
+import random
 import streamlit as st
 from agent.core import NAIDAgent
+
+INITIAL_PHRASES = [
+    "_Reading your question…_",
+    "_Picking the right dataset…_",
+    "_Warming up the analysis…_",
+    "_Thinking through the angles…_",
+    "_Lining up the numbers…_",
+    "_Working on it…_",
+]
 
 st.set_page_config(
     page_title="NAID Agent",
@@ -169,7 +179,10 @@ if prompt:
 
     with st.chat_message("assistant"):
         text_placeholder = st.empty()
-        text_placeholder.markdown("_Thinking…_")
+        if not st.session_state.agent.messages:
+            text_placeholder.markdown("_Initializing research environment and loading datasets… first response takes ~30s, follow-ups are much faster._")
+        else:
+            text_placeholder.markdown(random.choice(INITIAL_PHRASES))
         accumulated = ""
         try:
             for chunk in st.session_state.agent.chat_stream(prompt):

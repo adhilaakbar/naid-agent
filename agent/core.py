@@ -32,6 +32,31 @@ FILE_IDS_PATH = PROJECT_ROOT / "data" / "file_ids.json"
 MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 4000
 
+# Status phrases shown while a tool is running. Rotated per-call so the user
+# sees varied "what's happening now" updates instead of a static spinner.
+CODE_PHRASES = [
+    "Querying the data",
+    "Loading the parquet",
+    "Computing aggregates",
+    "Slicing by state and sector",
+    "Cross-checking the numbers",
+    "Refining the analysis",
+    "Building the chart",
+]
+WEB_PHRASES = [
+    "Checking recent coverage",
+    "Searching for policy updates",
+    "Looking up current figures",
+    "Pulling the latest reporting",
+]
+PROCESSING_PHRASES = [
+    "Reading the results",
+    "Synthesizing what came back",
+    "Drafting the answer",
+    "Pulling it together",
+    "Citing the sources",
+]
+
 
 def load_file_ids():
     """Load file IDs from local JSON or Streamlit secrets."""
@@ -125,30 +150,66 @@ class NAIDAgent:
         inline_images = []
         code_exec_happened = False
         turn_count = 0
+        code_idx = 0
+        web_idx = 0
+        proc_idx = 0
 
         while True:
             turn_count += 1
             t_stream = time.time()
             request_kwargs = self._build_request_kwargs()
 
+            current_tool_name = None
+            current_tool_input = ""
+
             with self.client.beta.messages.stream(**request_kwargs) as stream:
                 for event in stream:
                     etype = getattr(event, "type", "")
                     if etype == "content_block_delta":
                         delta = getattr(event, "delta", None)
-                        if delta and getattr(delta, "type", "") == "text_delta":
+                        dtype = getattr(delta, "type", "") if delta else ""
+                        if dtype == "text_delta":
                             chunk = getattr(delta, "text", "")
                             if chunk:
                                 yield chunk
+                        elif dtype == "input_json_delta" and current_tool_name:
+                            current_tool_input += getattr(delta, "partial_json", "") or ""
                     elif etype == "content_block_start":
                         block = getattr(event, "content_block", None)
                         btype = getattr(block, "type", "") if block else ""
                         if btype == "server_tool_use":
-                            name = getattr(block, "name", "")
-                            if name == "code_execution":
-                                yield "\n\n_Running code…_\n\n"
-                            elif name == "web_search":
-                                yield "\n\n_Searching the web…_\n\n"
+                            current_tool_name = getattr(block, "name", "")
+                            current_tool_input = ""
+                            if current_tool_name == "code_execution":
+                                phrase = CODE_PHRASES[code_idx % len(CODE_PHRASES)]
+                                code_idx += 1
+                                yield f"\n\n_{phrase}…_\n\n"
+                            elif current_tool_name == "web_search":
+                                phrase = WEB_PHRASES[web_idx % len(WEB_PHRASES)]
+                                web_idx += 1
+                                yield f"\n\n_{phrase}…_\n\n"
+                    elif etype == "content_block_stop":
+                        # When a tool block finishes, surface a snippet of the
+                        # actual input so the user sees what Claude is doing.
+                        if current_tool_name and current_tool_input:
+                            try:
+                                parsed = json.loads(current_tool_input)
+                                if current_tool_name == "web_search":
+                                    q = parsed.get("query", "").strip()
+                                    if q:
+                                        yield f"› _{q[:120]}_\n\n"
+                                elif current_tool_name == "code_execution":
+                                    code = parsed.get("code", "")
+                                    first_line = next(
+                                        (ln.strip() for ln in code.splitlines() if ln.strip() and not ln.strip().startswith("#")),
+                                        "",
+                                    )
+                                    if first_line:
+                                        yield f"› `{first_line[:100]}`\n\n"
+                            except Exception:
+                                pass
+                        current_tool_name = None
+                        current_tool_input = ""
                 response = stream.get_final_message()
 
             print(f"[timing] round {turn_count}: stream took {time.time()-t_stream:.1f}s, stop_reason={response.stop_reason}")
@@ -176,7 +237,9 @@ class NAIDAgent:
                                     })
 
             if response.stop_reason == "tool_use":
-                yield "\n_Processing results…_\n"
+                phrase = PROCESSING_PHRASES[proc_idx % len(PROCESSING_PHRASES)]
+                proc_idx += 1
+                yield f"\n_{phrase}…_\n"
                 continue
             break
 
