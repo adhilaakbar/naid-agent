@@ -6,8 +6,15 @@ Run with:
 """
 import base64
 import random
+import threading
 import streamlit as st
 from agent.core import NAIDAgent
+
+try:
+    from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
+except Exception:
+    add_script_run_ctx = None
+    get_script_run_ctx = None
 
 INITIAL_PHRASES = [
     "_Reading your question…_",
@@ -16,7 +23,52 @@ INITIAL_PHRASES = [
     "_Thinking through the angles…_",
     "_Lining up the numbers…_",
     "_Working on it…_",
+    "_Pulling up references…_",
+    "_Sorting through the scenarios…_",
 ]
+
+FIRST_TURN_PHRASES = [
+    "_Initializing research environment…_",
+    "_Loading the GTAP labor data…_",
+    "_Loading diaspora and remittance data…_",
+    "_Almost ready — first response takes ~30s, follow-ups are faster…_",
+]
+
+
+class _RotatingStatus:
+    """Cycles through phrases on a placeholder until stopped."""
+
+    def __init__(self, placeholder, phrases, interval=2.5, shuffle=True):
+        self.placeholder = placeholder
+        self.phrases = list(phrases)
+        if shuffle:
+            random.shuffle(self.phrases)
+        self.interval = interval
+        self._stop = threading.Event()
+        self._thread = None
+
+    def start(self):
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        if get_script_run_ctx and add_script_run_ctx:
+            ctx = get_script_run_ctx()
+            if ctx:
+                add_script_run_ctx(self._thread, ctx)
+        self._thread.start()
+
+    def _run(self):
+        i = 0
+        while not self._stop.is_set():
+            try:
+                self.placeholder.markdown(self.phrases[i % len(self.phrases)])
+            except Exception:
+                pass
+            i += 1
+            self._stop.wait(self.interval)
+
+    def stop(self):
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=0.3)
 
 st.set_page_config(
     page_title="NAID Agent",
@@ -179,13 +231,24 @@ if prompt:
 
     with st.chat_message("assistant"):
         text_placeholder = st.empty()
-        if not st.session_state.agent.messages:
-            text_placeholder.markdown("_Initializing research environment and loading datasets… first response takes ~30s, follow-ups are much faster._")
-        else:
-            text_placeholder.markdown(random.choice(INITIAL_PHRASES))
+
+        first_turn = not st.session_state.agent.messages
+        rotator_phrases = FIRST_TURN_PHRASES if first_turn else INITIAL_PHRASES
+        rotator = _RotatingStatus(
+            text_placeholder,
+            rotator_phrases,
+            interval=3.0 if first_turn else 2.5,
+            shuffle=not first_turn,
+        )
+        rotator.start()
+
         accumulated = ""
         try:
             for chunk in st.session_state.agent.chat_stream(prompt):
+                if not accumulated:
+                    # First real content from the agent — kill the rotator
+                    # and let streamed text take over.
+                    rotator.stop()
                 accumulated += chunk
                 # Escape dollar signs so Streamlit doesn't render them as LaTeX math
                 text_placeholder.markdown(accumulated.replace("$", "\\$"))
@@ -195,6 +258,8 @@ if prompt:
         except Exception as e:
             response = {"text": f"Error: {e}", "images": []}
             text_placeholder.markdown(f"Error: {e}")
+        finally:
+            rotator.stop()
 
         for img in response["images"]:
             st.image(base64.b64decode(img["data"]))
