@@ -57,13 +57,26 @@ class NAIDAgent:
         self.last_response = {"text": "", "images": []}
 
     def _build_request_kwargs(self):
+        # Cache_control markers turn repeat input into ~10%-weighted cached reads,
+        # which keeps us under the 30k-input-tokens/min rate limit on long sessions.
         kwargs = {
             "model": MODEL,
             "max_tokens": MAX_TOKENS,
-            "system": SYSTEM_PROMPT,
+            "system": [
+                {
+                    "type": "text",
+                    "text": SYSTEM_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
             "tools": [
                 {"type": "code_execution_20250825", "name": "code_execution"},
-                {"type": "web_search_20250305", "name": "web_search", "max_uses": 5},
+                {
+                    "type": "web_search_20250305",
+                    "name": "web_search",
+                    "max_uses": 5,
+                    "cache_control": {"type": "ephemeral"},
+                },
             ],
             "betas": ["code-execution-2025-08-25", "files-api-2025-04-14"],
             "messages": self.messages,
@@ -75,12 +88,18 @@ class NAIDAgent:
     def chat_stream(self, user_message):
         """Stream a turn. Yields text chunks; populates self.last_response when done."""
         # First user turn: attach all files. Later turns: just text.
+        # The first message gets a cache breakpoint so subsequent turns can
+        # cache-read the file-upload list instead of re-sending it as fresh input.
         if not self.messages:
             user_content = [
                 {"type": "container_upload", "file_id": fid}
                 for fid in self.file_ids.values()
             ]
-            user_content.append({"type": "text", "text": user_message})
+            user_content.append({
+                "type": "text",
+                "text": user_message,
+                "cache_control": {"type": "ephemeral"},
+            })
         else:
             user_content = user_message
 
