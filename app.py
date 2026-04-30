@@ -228,10 +228,10 @@ for msg in st.session_state.messages:
             st.image(base64.b64decode(img["data"]))
 
 # --- Handle new input ---
-# If a sidebar button queued a prompt, use it; otherwise wait for chat input
-prompt = st.session_state.pop("queued_prompt", None)
-if not prompt:
-    prompt = st.chat_input("Ask a question about US–Mexico economic integration...")
+# Always render the chat input so it stays visible even after a sidebar button
+# fires. A queued prompt (from the sidebar) takes priority over typed input.
+typed = st.chat_input("Ask a question about US–Mexico economic integration...")
+prompt = st.session_state.pop("queued_prompt", None) or typed
 
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
