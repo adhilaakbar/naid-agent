@@ -79,14 +79,22 @@ st.set_page_config(
 # --- Custom CSS for styling ---
 st.markdown("""
 <style>
-    /* Force light backgrounds */
-    .stApp { background-color: #FFFFFF !important; }
+    /* Dark backgrounds */
+    .stApp { background-color: #0D1B2A !important; }
     [data-testid="stSidebar"] {
-        background-color: #F4F6F9 !important;
-        border-right: 1px solid #E0E4EA;
+        background-color: #152838 !important;
+        border-right: 1px solid #2A3F55;
     }
-   .stApp p, .stApp li, .stApp span:not([style*="color"]) { color: #1A1A1A; }
-    .stApp [data-testid="stChatMessageContent"] { color: #1A1A1A !important; }
+    .stApp p, .stApp li, .stApp span:not([style*="color"]) { color: #E8ECEF; }
+    .stApp [data-testid="stChatMessageContent"] { color: #E8ECEF !important; }
+
+    /* Code snippets and inline code in dark theme */
+    .stApp code {
+        background-color: #1F3548 !important;
+        color: #F0D78C !important;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
 
     /* Hide Streamlit's default top toolbar so our banner sits flush
        and isn't half-hidden behind the deploy/share buttons */
@@ -97,11 +105,11 @@ st.markdown("""
         max-width: 900px;
     }
 
-    /* Sidebar headings */
+    /* Sidebar headings — gold accent on dark */
     [data-testid="stSidebar"] h1,
     [data-testid="stSidebar"] h2,
     [data-testid="stSidebar"] h3 {
-        color: #1B3A5E !important;
+        color: #C9A14A !important;
         font-family: Georgia, 'Times New Roman', serif;
     }
     [data-testid="stSidebar"] h1 {
@@ -116,17 +124,44 @@ st.markdown("""
         margin-top: 1.2rem;
     }
 
+    /* Sidebar body text */
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] li {
+        color: #C5CDD6 !important;
+    }
+    [data-testid="stSidebar"] strong { color: #E8ECEF !important; }
+
+    /* Sidebar separators */
+    [data-testid="stSidebar"] hr {
+        border-color: #2A3F55 !important;
+    }
+
     /* Chat */
     [data-testid="stChatMessageContent"] {
         font-size: 15px;
         line-height: 1.65;
     }
+    /* Chat message bubble backgrounds */
+    [data-testid="stChatMessage"] {
+        background-color: #152838 !important;
+        border: 1px solid #2A3F55;
+    }
 
-    /* Sidebar buttons */
+    /* Chat input bar */
+    [data-testid="stChatInput"] {
+        background-color: #152838 !important;
+    }
+    [data-testid="stChatInput"] textarea {
+        background-color: #1F3548 !important;
+        color: #E8ECEF !important;
+        border: 1px solid #2A3F55 !important;
+    }
+
+    /* Sidebar buttons — outlined gold on dark */
     [data-testid="stSidebar"] .stButton > button {
-        background-color: #FFFFFF;
-        color: #1B3A5E !important;
-        border: 1px solid #1B3A5E;
+        background-color: transparent;
+        color: #C9A14A !important;
+        border: 1px solid #C9A14A;
         font-size: 13px;
         text-align: left;
         font-weight: 500;
@@ -135,8 +170,16 @@ st.markdown("""
         padding: 8px 12px;
     }
     [data-testid="stSidebar"] .stButton > button:hover {
-        background-color: #1B3A5E;
-        color: #FFFFFF !important;
+        background-color: #C9A14A;
+        color: #0D1B2A !important;
+        border-color: #C9A14A;
+    }
+
+    /* Captions / small text */
+    .stApp [data-testid="stCaptionContainer"],
+    .stApp .caption,
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+        color: #8FA0B5 !important;
     }
 </style>
 """, unsafe_allow_html=True)
