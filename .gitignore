@@ -8,6 +8,7 @@ data/*.parquet
 data/model_inputs/
 library/*.docx
 library/*.md
+library/*.pdf
 
 # Python
 __pycache__/

@@ -22,6 +22,7 @@ files_to_upload.extend(sorted(DATA_DIR.glob("*.parquet")))
 files_to_upload.extend(sorted(DATA_DIR.glob("model_inputs/*.csv")))
 files_to_upload.extend(sorted(LIBRARY_DIR.glob("*.md")))
 files_to_upload.extend(sorted(LIBRARY_DIR.glob("*.docx")))
+files_to_upload.extend(sorted(LIBRARY_DIR.glob("*.pdf")))
 
 # Load existing file_ids if present (so we don't re-upload)
 if OUTPUT.exists():

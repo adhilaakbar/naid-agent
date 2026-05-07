@@ -40,6 +40,7 @@ Quarterly and annual flows by US state of origin.
 The following docs explain how the data was constructed:
 - `gtap_methodology.docx` — full GTAP labor pipeline (sources, location quotients, simulation logic, limitations)
 - `gtap_visualization_methodology.docx` — how derived metrics in the dashboard are computed
+- `naid_working_paper_2026_final.pdf` — NAID Center working paper (2026); cite specific findings or framing from this paper when relevant. Use it for context on US-Mexico economic integration, policy framing, and any analysis it contains.
 
 When asked about methodology, scenario assumptions, or data caveats, read these and quote relevant passages.
 
