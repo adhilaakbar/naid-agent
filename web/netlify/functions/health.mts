@@ -24,8 +24,8 @@ function describe(name: string) {
  * whitespace, repetition — never the key itself. A key that is present but the
  * wrong length is almost always a bad paste, and these narrow down which kind.
  */
-function inspectKey() {
-  const v = process.env.ANTHROPIC_API_KEY ?? "";
+function inspectKey(name: string) {
+  const v = process.env[name] ?? "";
   const trimmed = v.trim();
   const occurrences = (v.match(/sk-ant-/g) ?? []).length;
   const problems: string[] = [];
@@ -41,6 +41,11 @@ function inspectKey() {
     problems.push("contains the variable name — paste only the value, not NAME=value");
   if (v.includes("file_"))
     problems.push("contains 'file_' — FILE_IDS content was pasted into this field");
+  if (trimmed.startsWith("eyJ"))
+    problems.push(
+      "looks like a JWT, not an Anthropic key — this is Netlify's AI Gateway token, " +
+        "not yours. Set your key as NAID_ANTHROPIC_API_KEY instead.",
+    );
   if (trimmed.length < 90 || trimmed.length > 130)
     problems.push(`length ${trimmed.length} is outside the expected ~100-115 range`);
 
@@ -48,9 +53,15 @@ function inspectKey() {
 }
 
 export default async () => {
-  const key = describe("ANTHROPIC_API_KEY");
+  const ownKey = describe("NAID_ANTHROPIC_API_KEY");
+  const sharedKey = describe("ANTHROPIC_API_KEY");
   const fileIds = describe("FILE_IDS");
   const password = describe("SITE_PASSWORD");
+
+  // Mirrors resolveApiKey() in chat.mts.
+  const usable =
+    (process.env.NAID_ANTHROPIC_API_KEY?.trim()?.length ?? 0) > 0 ||
+    (process.env.ANTHROPIC_API_KEY?.trim()?.startsWith("sk-ant-") ?? false);
 
   // Validate FILE_IDS shape without echoing any ids.
   let fileIdsParsed: { valid: boolean; count: number; note?: string } = {
@@ -77,16 +88,28 @@ export default async () => {
     }
   }
 
-  const ready = key.present && fileIdsParsed.valid && fileIdsParsed.count > 0;
+  const ready = usable && fileIdsParsed.valid && fileIdsParsed.count > 0;
 
   return Response.json(
     {
       ready,
+      apiKeyResolved: usable
+        ? ownKey.present
+          ? "using NAID_ANTHROPIC_API_KEY"
+          : "using ANTHROPIC_API_KEY"
+        : "NO USABLE KEY — set NAID_ANTHROPIC_API_KEY",
       checks: {
+        NAID_ANTHROPIC_API_KEY: {
+          ...ownKey,
+          preferred: true,
+          diagnosis: ownKey.present
+            ? inspectKey("NAID_ANTHROPIC_API_KEY").problems
+            : ["not set — set your sk-ant- key here"],
+        },
         ANTHROPIC_API_KEY: {
-          ...key,
-          expected: "~108 chars, starts with sk-ant-",
-          diagnosis: inspectKey().problems,
+          ...sharedKey,
+          note: "Netlify's AI Gateway may claim this name; it is only used as a fallback",
+          diagnosis: inspectKey("ANTHROPIC_API_KEY").problems,
         },
         FILE_IDS: { ...fileIds, ...fileIdsParsed, expected: "JSON object, 14 entries" },
         SITE_PASSWORD: {
@@ -101,7 +124,7 @@ export default async () => {
       },
       hint: ready
         ? "Config looks good."
-        : "If a variable shows present:false but exists in the Netlify UI, its scope probably excludes Functions, or it is set for a different deploy context. Fix the scope, then redeploy — env changes need a new deploy to reach functions.",
+        : "Set NAID_ANTHROPIC_API_KEY (your sk-ant- key) and FILE_IDS. If a variable shows present:false but exists in the Netlify UI, its scope probably excludes Functions, or it is set for a different deploy context. Env changes only reach functions after a new deploy — trigger one after editing.",
     },
     { headers: { "cache-control": "no-store" } },
   );

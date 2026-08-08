@@ -95,7 +95,38 @@ function loadFileIds(): Record<string, string> {
   }
 }
 
-const client = new Anthropic();
+/**
+ * Netlify's own AI Gateway injects an ANTHROPIC_API_KEY (a gateway JWT, not an
+ * sk-ant- key) when the Claude Agent feature is enabled on the site. That value
+ * silently shadows anything you set under the same name, so read a project
+ * specific name first and only fall back to the shared one.
+ */
+function resolveApiKey(): string {
+  const own = process.env.NAID_ANTHROPIC_API_KEY?.trim();
+  if (own) return own;
+
+  const shared = process.env.ANTHROPIC_API_KEY?.trim();
+  if (shared?.startsWith("sk-ant-")) return shared;
+
+  if (shared) {
+    throw new Error(
+      "ANTHROPIC_API_KEY is set but is not an Anthropic API key (it does not " +
+        "start with 'sk-ant-'). Netlify's AI Gateway claims that variable name. " +
+        "Set your key as NAID_ANTHROPIC_API_KEY instead. See /api/health.",
+    );
+  }
+  throw new Error(
+    "No Anthropic API key found. Set NAID_ANTHROPIC_API_KEY in Netlify. See /api/health.",
+  );
+}
+
+// Built lazily so a misconfigured key surfaces as a readable message on the
+// stream rather than crashing module load with an opaque 500.
+let _client: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!_client) _client = new Anthropic({ apiKey: resolveApiKey() });
+  return _client;
+}
 
 export default async (req: Request, context: Context) => {
   if (req.method !== "POST") {
@@ -180,7 +211,7 @@ export default async (req: Request, context: Context) => {
             break;
           }
 
-          const modelStream = client.beta.messages.stream({
+          const modelStream = getClient().beta.messages.stream({
             model: MODEL,
             max_tokens: MAX_TOKENS,
             betas: ["files-api-2025-04-14"],
@@ -311,7 +342,7 @@ export default async (req: Request, context: Context) => {
         const imageIds = [];
         for (const fileId of generatedFileIds) {
           try {
-            const meta = await client.beta.files.retrieveMetadata(fileId);
+            const meta = await getClient().beta.files.retrieveMetadata(fileId);
             const name = (meta.filename ?? "").toLowerCase();
             if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg")) {
               imageIds.push({ fileId, name });
@@ -324,7 +355,7 @@ export default async (req: Request, context: Context) => {
         const lastImage = imageIds[imageIds.length - 1];
         if (lastImage) {
           try {
-            const res = await client.beta.files.download(lastImage.fileId);
+            const res = await getClient().beta.files.download(lastImage.fileId);
             const buf = Buffer.from(await res.arrayBuffer());
             send({
               t: "image",
