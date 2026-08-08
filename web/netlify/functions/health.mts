@@ -19,6 +19,34 @@ function describe(name: string) {
   };
 }
 
+/**
+ * Shape checks on the API key. Reports only structural facts — prefix, stray
+ * whitespace, repetition — never the key itself. A key that is present but the
+ * wrong length is almost always a bad paste, and these narrow down which kind.
+ */
+function inspectKey() {
+  const v = process.env.ANTHROPIC_API_KEY ?? "";
+  const trimmed = v.trim();
+  const occurrences = (v.match(/sk-ant-/g) ?? []).length;
+  const problems: string[] = [];
+
+  if (!v) return { problems: ["not set"], occurrences: 0 };
+  if (!trimmed.startsWith("sk-ant-"))
+    problems.push("does not start with 'sk-ant-' — wrong value pasted");
+  if (v !== trimmed) problems.push("has leading/trailing whitespace — trim it");
+  if (/[\r\n]/.test(v)) problems.push("contains a line break — paste as one line");
+  if (occurrences > 1)
+    problems.push(`contains 'sk-ant-' ${occurrences} times — the key was pasted more than once`);
+  if (v.includes("ANTHROPIC_API_KEY"))
+    problems.push("contains the variable name — paste only the value, not NAME=value");
+  if (v.includes("file_"))
+    problems.push("contains 'file_' — FILE_IDS content was pasted into this field");
+  if (trimmed.length < 90 || trimmed.length > 130)
+    problems.push(`length ${trimmed.length} is outside the expected ~100-115 range`);
+
+  return { problems: problems.length ? problems : ["looks well-formed"], occurrences };
+}
+
 export default async () => {
   const key = describe("ANTHROPIC_API_KEY");
   const fileIds = describe("FILE_IDS");
@@ -58,6 +86,7 @@ export default async () => {
         ANTHROPIC_API_KEY: {
           ...key,
           expected: "~108 chars, starts with sk-ant-",
+          diagnosis: inspectKey().problems,
         },
         FILE_IDS: { ...fileIds, ...fileIdsParsed, expected: "JSON object, 14 entries" },
         SITE_PASSWORD: {
