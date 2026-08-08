@@ -1,0 +1,14 @@
+{
+  "name": "naid-agent-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "NAID Research Agent — Netlify build (TypeScript port of agent/core.py)",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
+    "@netlify/blobs": "^8.1.0"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^3.0.0"
+  }
+}

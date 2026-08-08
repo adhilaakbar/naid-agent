@@ -1,0 +1,24 @@
+# Netlify config for the NAID Agent web build.
+# Everything lives under web/ so the Streamlit app at the repo root is untouched.
+
+[build]
+  base = "web"
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Controls who may iframe this page. 'self' alone allows only same-origin,
+    # which BLOCKS embedding agent.yourdomain.org inside yourdomain.org — those
+    # are different origins.
+    #
+    # To embed it in the agents tab, add the parent site here, e.g.:
+    #   frame-ancestors 'self' https://naid.ucla.edu https://*.ucla.edu;
+    #
+    # Leave as-is if the agents tab just links out to the subdomain instead.
+    Content-Security-Policy = "frame-ancestors 'self';"

@@ -27,3 +27,8 @@ Thumbs.db
 # Generated outputs
 outputs/
 docs/data_inspection.txt
+
+# Netlify web build
+web/node_modules/
+web/.netlify/
+.netlify/

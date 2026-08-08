@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NAID Research Agent</title>
+<style>
+  :root {
+    --bg: #0D1B2A;
+    --panel: #152838;
+    --header: #1B3A5E;
+    --gold: #C9A14A;
+    --text: #E8ECEF;
+    --muted: #8FA0B5;
+    --soft: #C5CDD6;
+    --border: #2A3F55;
+    --code-bg: #1F3548;
+    --code-fg: #F0D78C;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* ---- Header ---- */
+  header.banner {
+    background: var(--header);
+    border-bottom: 3px solid var(--gold);
+    padding: 24px 32px;
+  }
+  .banner-inner { max-width: 1200px; margin: 0 auto; }
+  .banner h1 {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #fff;
+  }
+  .banner .sub {
+    margin-top: 5px;
+    color: var(--gold);
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* ---- Layout ---- */
+  .shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 28px;
+    padding: 24px 32px 0;
+    align-items: start;
+  }
+
+  aside {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px;
+    position: sticky;
+    top: 24px;
+  }
+  aside h2 {
+    font-family: Georgia, serif;
+    color: var(--gold);
+    font-size: 20px;
+    margin: 0 0 10px;
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 8px;
+  }
+  aside h3 {
+    color: var(--gold);
+    font-family: Georgia, serif;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 22px 0 8px;
+  }
+  aside p, aside li { color: var(--soft); font-size: 13px; }
+  aside strong { color: var(--text); }
+  aside hr { border: 0; border-top: 1px solid var(--border); margin: 18px 0; }
+  .example {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.3;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .example:hover { background: var(--gold); color: var(--bg); }
+  .example:disabled { opacity: .45; cursor: not-allowed; }
+  .reset {
+    width: 100%;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .reset:hover { border-color: var(--gold); color: var(--gold); }
+  .note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+  /* ---- Chat ---- */
+  main { min-width: 0; padding-bottom: 140px; }
+  .msg {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    overflow-wrap: anywhere;
+  }
+  .msg.user { border-left: 3px solid var(--gold); }
+  .role {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .status { color: var(--muted); font-style: italic; }
+  .status .code {
+    display: block;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--code-fg);
+    background: var(--code-bg);
+    border-radius: 3px;
+    padding: 4px 8px;
+    margin: 6px 0;
+    font-style: normal;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .err {
+    border-left: 3px solid #C25B4E;
+    color: #F0B4AC;
+  }
+
+  /* Markdown output */
+  .body h1, .body h2, .body h3 {
+    font-family: Georgia, serif;
+    color: var(--gold);
+    margin: 18px 0 8px;
+    line-height: 1.3;
+  }
+  .body h1 { font-size: 21px; }
+  .body h2 { font-size: 18px; }
+  .body h3 { font-size: 15px; text-transform: uppercase; letter-spacing: 1px; }
+  .body p { margin: 0 0 12px; }
+  .body ul, .body ol { margin: 0 0 12px; padding-left: 22px; }
+  .body li { margin-bottom: 4px; }
+  .body code {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
+  .body pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 0 0 12px;
+  }
+  .body pre code { background: none; padding: 0; }
+  .body a { color: var(--gold); }
+  .table-wrap { overflow-x: auto; margin: 0 0 12px; }
+  .body table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  .body th, .body td {
+    border: 1px solid var(--border);
+    padding: 7px 10px;
+    text-align: left;
+  }
+  .body th { background: var(--code-bg); color: var(--gold); font-weight: 600; }
+  .body blockquote {
+    border-left: 3px solid var(--border);
+    margin: 0 0 12px;
+    padding-left: 14px;
+    color: var(--soft);
+  }
+  .body img { max-width: 100%; border-radius: 4px; margin-top: 10px; }
+  .chart { max-width: 100%; border-radius: 4px; margin-top: 12px; display: block; }
+
+  /* ---- Composer ---- */
+  .composer {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: linear-gradient(to top, var(--bg) 72%, transparent);
+    padding: 20px 32px 24px;
+  }
+  .composer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: 328px;
+  }
+  form {
+    display: flex;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+  }
+  textarea {
+    flex: 1;
+    background: var(--code-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 15px;
+    resize: none;
+    min-height: 46px;
+    max-height: 160px;
+  }
+  textarea:focus { outline: none; border-color: var(--gold); }
+  button.send {
+    background: var(--gold);
+    color: var(--bg);
+    border: 0;
+    border-radius: 4px;
+    padding: 0 22px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button.send:disabled { opacity: .45; cursor: not-allowed; }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; padding: 20px; }
+    aside { position: static; }
+    .composer { padding: 16px 20px 20px; }
+    .composer-inner { padding-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="banner">
+  <div class="banner-inner">
+    <h1>NAID Research Agent</h1>
+    <div class="sub">North American Integration &amp; Development Center · UCLA</div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside>
+    <h2>About</h2>
+    <p>Research assistant for US–Mexico economic integration, Mexican-origin and
+       Latino economic contributions, and the labor and trade impacts of
+       immigration and trade policy.</p>
+
+    <hr />
+    <h3>Datasets</h3>
+    <p><strong>GTAP Labor Database</strong><br />County-level employment, baseline + 5 simulation scenarios (deportation, USMCA)</p>
+    <p><strong>Diaspora GDP</strong><br />Mexican-origin &amp; Latino economic contribution by state, 2023</p>
+    <p><strong>Mexico Export Jobs</strong><br />Jobs in Mexico tied to US-bound exports</p>
+    <p><strong>Remittances</strong><br />Quarterly &amp; annual flows by US state of origin</p>
+
+    <hr />
+    <h3>Try asking</h3>
+    <button class="example" data-q="Compare Texas and California on Latino GDP, Mexican-origin share of state GDP, and projected employment loss under JPM_sim03.">📊 Compare TX vs CA on deportation impact</button>
+    <button class="example" data-q="Make a bar chart of the top 10 US states by remittances to Mexico in 2023.">💸 Top 10 states by remittances</button>
+    <button class="example" data-q="Which US industries have the highest share of unauthorized foreign-born workers, and how do they fare under JPM_sim03?">🏗️ Most exposed sectors</button>
+    <button class="example" data-q="Explain how the GTAP labor database was built — sources, location quotients, and the simulation logic.">📚 What's the methodology?</button>
+
+    <hr />
+    <button class="reset" id="reset">Reset conversation</button>
+
+    <hr />
+    <p class="note">Every answer is sourced. Numerical claims cite the dataset,
+       vintage, and known caveats. The agent uses code execution for analysis
+       and web search for current events.</p>
+  </aside>
+
+  <main id="chat"></main>
+</div>
+
+<div class="composer">
+  <div class="composer-inner">
+    <form id="form">
+      <textarea id="input" rows="1" placeholder="Ask a question about US–Mexico economic integration..."></textarea>
+      <button class="send" id="send" type="submit">Send</button>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  const chat = document.getElementById("chat");
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("send");
+  const examples = document.querySelectorAll(".example");
+
+  let sessionId = sessionStorage.getItem("naid_session") || null;
+  let password = sessionStorage.getItem("naid_pw") || null;
+  let busy = false;
+
+  /* ---------- Minimal markdown renderer ----------
+     Model output is untrusted text, so everything is HTML-escaped before any
+     markup is introduced. */
+  function esc(s) {
+    return s.replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
+  function inline(s) {
+    return s
+      .replace(/`([^`]+)`/g, (_, c) => "<code>" + c + "</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,
+               '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  }
+
+  function renderMarkdown(src) {
+    const blocks = [];
+    // Pull fenced code out first so its contents are never treated as markup.
+    let text = esc(src).replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+      blocks.push("<pre><code>" + code.replace(/\n$/, "") + "</code></pre>");
+      return " B" + (blocks.length - 1) + " ";
+    });
+
+    const lines = text.split("\n");
+    const out = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Table: header row, separator row, then body rows.
+      if (
+        line.trim().startsWith("|") &&
+        i + 1 < lines.length &&
+        /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])
+      ) {
+        const cells = (r) =>
+          r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+        const head = cells(line);
+        i += 2;
+        const rows = [];
+        while (i < lines.length && lines[i].trim().startsWith("|")) {
+          rows.push(cells(lines[i]));
+          i++;
+        }
+        out.push(
+          '<div class="table-wrap"><table><thead><tr>' +
+            head.map((h) => "<th>" + inline(h) + "</th>").join("") +
+            "</tr></thead><tbody>" +
+            rows
+              .map((r) => "<tr>" + r.map((c) => "<td>" + inline(c) + "</td>").join("") + "</tr>")
+              .join("") +
+            "</tbody></table></div>",
+        );
+        continue;
+      }
+
+      const heading = line.match(/^(#{1,6})\s+(.*)$/);
+      if (heading) {
+        const lvl = Math.min(heading[1].length, 3);
+        out.push("<h" + lvl + ">" + inline(heading[2]) + "</h" + lvl + ">");
+        i++;
+        continue;
+      }
+
+      if (/^\s*>\s?/.test(line)) {
+        const buf = [];
+        while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+          buf.push(lines[i].replace(/^\s*>\s?/, ""));
+          i++;
+        }
+        out.push("<blockquote>" + inline(buf.join(" ")) + "</blockquote>");
+        continue;
+      }
+
+      const bullet = /^\s*[-*+]\s+/;
+      const numbered = /^\s*\d+[.)]\s+/;
+      if (bullet.test(line) || numbered.test(line)) {
+        const ordered = numbered.test(line);
+        const re = ordered ? numbered : bullet;
+        const items = [];
+        while (i < lines.length && re.test(lines[i])) {
+          items.push("<li>" + inline(lines[i].replace(re, "")) + "</li>");
+          i++;
+        }
+        out.push((ordered ? "<ol>" : "<ul>") + items.join("") + (ordered ? "</ol>" : "</ul>"));
+        continue;
+      }
+
+      if (!line.trim()) { i++; continue; }
+
+      const para = [];
+      while (
+        i < lines.length &&
+        lines[i].trim() &&
+        !/^(#{1,6})\s/.test(lines[i]) &&
+        !bullet.test(lines[i]) &&
+        !numbered.test(lines[i]) &&
+        !lines[i].trim().startsWith("|") &&
+        !/^\s*>\s?/.test(lines[i])
+      ) {
+        para.push(lines[i]);
+        i++;
+      }
+      out.push("<p>" + inline(para.join(" ")) + "</p>");
+    }
+
+    return out.join("").replace(/ B(\d+) /g, (_, n) => blocks[n]);
+  }
+
+  /* ---------- DOM helpers ---------- */
+  function addMessage(role) {
+    const el = document.createElement("div");
+    el.className = "msg " + role;
+    el.innerHTML =
+      '<div class="role">' + (role === "user" ? "You" : "NAID Agent") + "</div>" +
+      '<div class="status"></div><div class="body"></div>';
+    chat.appendChild(el);
+    scroll();
+    return {
+      status: el.querySelector(".status"),
+      body: el.querySelector(".body"),
+      el,
+    };
+  }
+
+  function scroll() {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }
+
+  function setBusy(v) {
+    busy = v;
+    sendBtn.disabled = v;
+    examples.forEach((b) => (b.disabled = v));
+  }
+
+  /* ---------- Send ---------- */
+  async function ask(question) {
+    if (busy || !question.trim()) return;
+    setBusy(true);
+
+    const userMsg = addMessage("user");
+    userMsg.body.textContent = question;
+
+    const bot = addMessage("assistant");
+    bot.status.textContent = sessionId
+      ? "Reading your question…"
+      : "Initializing research environment — the first response takes ~30s…";
+
+    let answer = "";
+    let statusLine = "";
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: question, sessionId, password }),
+      });
+
+      if (res.status === 401) {
+        const pw = prompt("This agent is password protected. Enter the password:");
+        if (pw) {
+          password = pw;
+          sessionStorage.setItem("naid_pw", pw);
+          bot.el.remove();
+          userMsg.el.remove();
+          setBusy(false);
+          return ask(question);
+        }
+        throw new Error("Password required.");
+      }
+      if (!res.ok) throw new Error("Server returned " + res.status);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let ev;
+          try { ev = JSON.parse(line); } catch { continue; }
+
+          if (ev.t === "session") {
+            sessionId = ev.sessionId;
+            sessionStorage.setItem("naid_session", sessionId);
+          } else if (ev.t === "text") {
+            answer += ev.v;
+            bot.status.textContent = "";
+            bot.body.innerHTML = renderMarkdown(answer);
+            scroll();
+          } else if (ev.t === "status") {
+            statusLine = ev.v;
+            bot.status.textContent = statusLine + "…";
+            scroll();
+          } else if (ev.t === "detail") {
+            bot.status.innerHTML =
+              esc(statusLine) + "…<span class='code'>" + esc(ev.v) + "</span>";
+          } else if (ev.t === "code") {
+            bot.status.innerHTML =
+              esc(statusLine) + "…<span class='code'>" + esc(ev.v) + "</span>";
+          } else if (ev.t === "image") {
+            const img = document.createElement("img");
+            img.className = "chart";
+            img.src = "data:" + ev.media_type + ";base64," + ev.data;
+            bot.el.appendChild(img);
+            scroll();
+          } else if (ev.t === "error") {
+            const e = document.createElement("div");
+            e.className = "msg err";
+            e.textContent = ev.v;
+            chat.appendChild(e);
+            scroll();
+          } else if (ev.t === "done") {
+            bot.status.textContent = "";
+          }
+        }
+      }
+    } catch (err) {
+      bot.status.textContent = "";
+      bot.body.innerHTML =
+        "<p><strong>Error:</strong> " + esc(err.message || String(err)) + "</p>";
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const q = input.value;
+    input.value = "";
+    input.style.height = "auto";
+    ask(q);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 160) + "px";
+  });
+
+  examples.forEach((b) =>
+    b.addEventListener("click", () => ask(b.dataset.q)),
+  );
+
+  document.getElementById("reset").addEventListener("click", () => {
+    // A new session id gives the agent a fresh container and history.
+    sessionId = null;
+    sessionStorage.removeItem("naid_session");
+    chat.innerHTML = "";
+  });
+})();
+</script>
+</body>
+</html>
