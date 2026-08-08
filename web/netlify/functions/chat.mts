@@ -34,10 +34,15 @@ const MODEL = "claude-opus-5";
 // mid-answer here.
 const MAX_TOKENS = 16000;
 
-// Netlify caps streaming functions at 60s with no way to raise it. We stop
-// starting new model rounds once we're close and hand back what we have, so a
-// long turn degrades into a partial answer rather than a dropped connection.
-const WALL_CLOCK_BUDGET_MS = 52_000;
+/**
+ * Netlify's docs say streaming functions get 60s. Measured against this site,
+ * the platform kills the invocation at a hard ~30s — five consecutive runs died
+ * at 29.7-30.2s regardless of workload, with no error and a clean socket close.
+ *
+ * So budget against 30s, not 60s, and leave enough margin to finish the current
+ * model round, persist state, and send a closing message before the kill.
+ */
+const WALL_CLOCK_BUDGET_MS = 24_000;
 
 // Effort trades answer depth against latency, and latency is the binding
 // constraint at 60s. Opus 5 is unusually strong at medium; override per-deploy
@@ -309,6 +314,12 @@ export default async (req: Request, context: Context) => {
 
           state.messages.push({ role: "assistant", content: response.content });
 
+          // Persist after every round, not just at the end. The platform can
+          // kill this invocation at ~30s with no warning; without an
+          // incremental save the whole turn — including an expensive container
+          // and everything computed in it — would be lost.
+          await store.setJSON(sessionId, state);
+
           for (const block of response.content) {
             if (block.type === "bash_code_execution_tool_result") {
               const result: any = block.content;
@@ -379,8 +390,9 @@ export default async (req: Request, context: Context) => {
           send({
             t: "error",
             v:
-              "This turn hit the 60-second limit before finishing. The work so far is " +
-              "saved — ask a narrower follow-up and the agent will pick up where it left off.",
+              "This turn ran out of time before finishing (the host caps a request at " +
+              "30 seconds). Everything computed so far is saved and the data is still " +
+              "loaded — ask a narrower follow-up and it will continue from here.",
           });
         }
 

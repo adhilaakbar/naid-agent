@@ -82,27 +82,34 @@ npm install
 netlify dev
 ```
 
-## The 60-second ceiling
+## The 30-second ceiling
 
-Netlify caps function execution at 60 seconds. This is fixed — not configurable,
-and identical on every plan including Enterprise.
+Netlify's docs state a 60-second limit for streaming functions. **Measured
+against this site, the platform kills the invocation at a hard ~30 seconds** —
+five consecutive runs died at 29.7-30.2s regardless of workload, with no error
+and a clean socket close. Budget against 30s, not 60s.
 
 Measured against live data:
 
 | Query | Rounds | Time |
 |---|---|---|
-| Row/column count on one parquet | 1 | 10.3s |
-| Top-5 bar chart from remittances | 3 code calls | 25.5s |
+| Row/column count on one parquet | 1 | ~10s |
+| Top-5 bar chart from remittances | 3 code calls | ~30s |
 
-So typical questions land comfortably inside the budget. Deep multi-dataset
-research with web search can exceed it. The function stops starting new model
-rounds at 52s and returns what it has with a note, so a long turn degrades into a
-partial answer rather than a dropped connection — and because state is persisted,
-a narrower follow-up resumes from the same container.
+Simple lookups finish comfortably. **Chart generation and multi-dataset research
+sit right at the ceiling and will often be cut off.**
 
-If long turns become common in practice, the fix is a background function (15
-min) writing to Netlify Blobs with the UI polling. Don't build that until you've
-measured it.
+The loop stops starting new model rounds at 24s and sends a closing message, and
+state is persisted after every round — so a cut turn keeps its container and
+history, and a narrower follow-up continues from where it stopped rather than
+starting over.
+
+### If that is too tight
+
+The fix is a background function (15-minute limit) that writes results to
+Netlify Blobs, with the page polling for completion. That trades the live
+token-by-token stream for a progress indicator, and is the only way to exceed
+30s on this host. Worth doing if chart-heavy questions are the common case.
 
 ## Two changes forced by serverless
 
