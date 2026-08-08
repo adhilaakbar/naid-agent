@@ -20,6 +20,10 @@
 
   * { box-sizing: border-box; }
 
+  /* The page itself never scrolls. The shell fills the viewport and only the
+     chat column scrolls inside it. */
+  html, body { height: 100%; overflow: hidden; }
+
   body {
     margin: 0;
     background: var(--bg);
@@ -27,50 +31,61 @@
     font-family: Helvetica, Arial, sans-serif;
     font-size: 15px;
     line-height: 1.65;
+    display: flex;
+    flex-direction: column;
   }
 
   /* ---- Header ---- */
   header.banner {
+    flex: none;
     background: var(--header);
     border-bottom: 3px solid var(--gold);
-    padding: 24px 32px;
+    padding: 16px 32px;
   }
   .banner-inner { max-width: 1200px; margin: 0 auto; }
   .banner h1 {
     margin: 0;
     font-family: Georgia, 'Times New Roman', serif;
-    font-size: 26px;
+    font-size: 23px;
     font-weight: 600;
     line-height: 1.2;
     color: #fff;
   }
   .banner .sub {
-    margin-top: 5px;
+    margin-top: 4px;
     color: var(--gold);
-    font-size: 11px;
+    font-size: 10.5px;
     letter-spacing: 2.5px;
     text-transform: uppercase;
     font-weight: 500;
   }
 
   /* ---- Layout ---- */
+  /* min-height:0 is what lets the flex children actually shrink and scroll
+     instead of growing the page. */
   .shell {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 28px;
-    padding: 24px 32px 0;
-    align-items: start;
+    grid-template-columns: 290px 1fr;
+    gap: 24px;
+    padding: 16px 32px;
+    overflow: hidden;
   }
 
   aside {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 20px;
-    position: sticky;
-    top: 24px;
+    padding: 18px;
+    min-height: 0;
+    /* Sized to fit a normal viewport; scrolls internally on short screens
+       rather than being clipped. */
+    overflow-y: auto;
+    scrollbar-width: thin;
   }
   aside h2 {
     font-family: Georgia, serif;
@@ -123,8 +138,20 @@
   .reset:hover { border-color: var(--gold); color: var(--gold); }
   .note { color: var(--muted); font-size: 12px; line-height: 1.5; }
 
-  /* ---- Chat ---- */
-  main { min-width: 0; padding-bottom: 140px; }
+  /* ---- Chat column ---- */
+  .chatcol {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+  }
+  main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+  }
   .msg {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -210,16 +237,11 @@
   .chart { max-width: 100%; border-radius: 4px; margin-top: 12px; display: block; }
 
   /* ---- Composer ---- */
+  /* Sits at the bottom of the chat column, not fixed to the viewport, so it
+     never overlaps content and never needs a scroll offset. */
   .composer {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    background: linear-gradient(to top, var(--bg) 72%, transparent);
-    padding: 20px 32px 24px;
-  }
-  .composer-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding-left: 328px;
+    flex: none;
+    padding-top: 14px;
   }
   form {
     display: flex;
@@ -256,11 +278,37 @@
   }
   button.send:disabled { opacity: .45; cursor: not-allowed; }
 
+  /* Compress the sidebar on short screens so everything still fits without
+     the page itself scrolling. */
+  @media (max-height: 800px) {
+    aside { padding: 14px; font-size: 12.5px; }
+    aside h2 { font-size: 17px; margin-bottom: 6px; padding-bottom: 5px; }
+    aside h3 { margin: 14px 0 6px; }
+    aside p, aside li { font-size: 12px; }
+    aside hr { margin: 12px 0; }
+    .example { padding: 6px 10px; margin-bottom: 6px; font-size: 12px; }
+    header.banner { padding: 11px 32px; }
+    .banner h1 { font-size: 20px; }
+  }
+
+  /* Below the two-column breakpoint the page scrolls normally again — a
+     fixed-viewport split does not work on a phone. */
   @media (max-width: 900px) {
-    .shell { grid-template-columns: 1fr; padding: 20px; }
-    aside { position: static; }
-    .composer { padding: 16px 20px 20px; }
-    .composer-inner { padding-left: 0; }
+    html, body { height: auto; overflow: auto; }
+    .shell {
+      grid-template-columns: 1fr;
+      padding: 16px 20px;
+      overflow: visible;
+      min-height: 0;
+    }
+    aside { overflow: visible; }
+    main { overflow: visible; }
+    .composer {
+      position: sticky;
+      bottom: 0;
+      background: var(--bg);
+      padding-bottom: 12px;
+    }
   }
 </style>
 </head>
@@ -303,15 +351,14 @@
        and web search for current events.</p>
   </aside>
 
-  <main id="chat"></main>
-</div>
-
-<div class="composer">
-  <div class="composer-inner">
-    <form id="form">
-      <textarea id="input" rows="1" placeholder="Ask a question about US–Mexico economic integration..."></textarea>
-      <button class="send" id="send" type="submit">Send</button>
-    </form>
+  <div class="chatcol">
+    <main id="chat"></main>
+    <div class="composer">
+      <form id="form">
+        <textarea id="input" rows="1" placeholder="Ask a question about US–Mexico economic integration..."></textarea>
+        <button class="send" id="send" type="submit">Send</button>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -448,7 +495,7 @@
       '<div class="role">' + (role === "user" ? "You" : "NAID Agent") + "</div>" +
       '<div class="status"></div><div class="body"></div>';
     chat.appendChild(el);
-    scroll();
+    scrollNow();
     return {
       status: el.querySelector(".status"),
       body: el.querySelector(".body"),
@@ -456,8 +503,17 @@
     };
   }
 
+  // The chat pane scrolls, not the window. Only auto-scroll when the user is
+  // already near the bottom, so scrolling up to read isn't yanked back down
+  // by streaming text.
   function scroll() {
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    const nearBottom =
+      chat.scrollHeight - chat.scrollTop - chat.clientHeight < 120;
+    if (nearBottom) chat.scrollTop = chat.scrollHeight;
+  }
+
+  function scrollNow() {
+    chat.scrollTop = chat.scrollHeight;
   }
 
   function setBusy(v) {
