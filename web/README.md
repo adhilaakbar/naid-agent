@@ -35,16 +35,29 @@ Set these in **Netlify → Site configuration → Environment variables**.
 
 | Variable | Required | Notes |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | yes | Same key the Streamlit app uses |
-| `FILE_IDS` | yes | The full contents of `data/file_ids.json`, as one line of JSON |
+| `ANTHROPIC_API_KEY` | yes | Your `sk-ant-…` key. If Netlify's AI Gateway has claimed this name, use `NAID_ANTHROPIC_API_KEY` instead — it takes precedence |
 | `SITE_PASSWORD` | recommended | Shared password gate. **Without it, anyone who finds the URL spends your API credits.** |
 | `NAID_EFFORT` | no | `low` \| `medium` \| `high` \| `xhigh` \| `max`. Defaults to `medium` |
+| `FILE_IDS` | no | Override only. Ids are committed in `netlify/functions/file-ids.ts` |
 
-`FILE_IDS` is a single-line JSON object — paste `data/file_ids.json` as-is:
+**Set scope to All scopes and apply to all deploy contexts.** A variable scoped
+to Builds only exists in the dashboard but is invisible to `process.env` at
+runtime. Netlify also binds variables at build time, so **trigger a new deploy
+after changing one** — editing a variable does not affect the running deploy.
 
-```json
-{"data/diaspora_gdp_long.parquet":"file_011C...","data/gtap_dashboard.parquet":"file_011C...", ...}
-```
+Check what the function can actually read at **`/api/health`**. It reports which
+variables are visible and diagnoses a malformed key without echoing any values.
+
+### Why the file ids are committed
+
+`file-ids.ts` holds the 14 Files API handles. They are opaque references scoped
+to the NAID Anthropic account and are inert without the API key — they cannot be
+read, listed, or billed by anyone who does not already hold it. Committing them
+removes a 987-character variable that otherwise had to be pasted by hand into
+every environment and re-pasted whenever it drifted.
+
+Re-run `scripts/upload_files.py` and regenerate `file-ids.ts` if a dataset is
+re-uploaded, or set `FILE_IDS` to override without touching code.
 
 ## Deploy
 

@@ -10,6 +10,7 @@
  *   curl https://<site>.netlify.app/api/health
  */
 import type { Config } from "@netlify/functions";
+import { FILE_IDS as COMMITTED_FILE_IDS } from "./file-ids.js";
 
 function describe(name: string) {
   const v = process.env[name];
@@ -63,18 +64,17 @@ export default async () => {
     (process.env.NAID_ANTHROPIC_API_KEY?.trim()?.length ?? 0) > 0 ||
     (process.env.ANTHROPIC_API_KEY?.trim()?.startsWith("sk-ant-") ?? false);
 
-  // Validate FILE_IDS shape without echoing any ids.
-  let fileIdsParsed: { valid: boolean; count: number; note?: string } = {
-    valid: false,
-    count: 0,
-  };
+  // File ids ship committed, so the env var is an optional override. Report
+  // which source is in effect and validate an override if one is present.
+  let fileIdsParsed: { valid: boolean; count: number; source: string; note?: string };
   if (fileIds.present) {
     try {
       const parsed = JSON.parse(process.env.FILE_IDS as string);
       const values = Object.values(parsed);
       fileIdsParsed = {
-        valid: true,
+        valid: values.length > 0,
         count: values.length,
+        source: "FILE_IDS environment variable (override)",
         note: values.every((v) => typeof v === "string" && v.startsWith("file_"))
           ? "all values look like file ids"
           : "WARNING: some values do not start with 'file_'",
@@ -83,9 +83,16 @@ export default async () => {
       fileIdsParsed = {
         valid: false,
         count: 0,
-        note: "FILE_IDS is set but is not valid JSON — check for smart quotes or a truncated paste",
+        source: "FILE_IDS environment variable (override) — INVALID",
+        note: "not valid JSON. Remove the variable to fall back to the committed ids.",
       };
     }
+  } else {
+    fileIdsParsed = {
+      valid: Object.keys(COMMITTED_FILE_IDS).length > 0,
+      count: Object.keys(COMMITTED_FILE_IDS).length,
+      source: "committed in file-ids.ts (no configuration needed)",
+    };
   }
 
   const ready = usable && fileIdsParsed.valid && fileIdsParsed.count > 0;
@@ -111,7 +118,12 @@ export default async () => {
           note: "Netlify's AI Gateway may claim this name; it is only used as a fallback",
           diagnosis: inspectKey("ANTHROPIC_API_KEY").problems,
         },
-        FILE_IDS: { ...fileIds, ...fileIdsParsed, expected: "JSON object, 14 entries" },
+        FILE_IDS: {
+          ...fileIds,
+          ...fileIdsParsed,
+          required: false,
+          note: "optional — ids are committed in file-ids.ts; set this only to override them",
+        },
         SITE_PASSWORD: {
           ...password,
           note: password.present
@@ -124,7 +136,7 @@ export default async () => {
       },
       hint: ready
         ? "Config looks good."
-        : "Set NAID_ANTHROPIC_API_KEY (your sk-ant- key) and FILE_IDS. If a variable shows present:false but exists in the Netlify UI, its scope probably excludes Functions, or it is set for a different deploy context. Env changes only reach functions after a new deploy — trigger one after editing.",
+        : "Set an Anthropic API key. File ids no longer need configuring — they are committed. If a variable shows present:false but exists in the Netlify UI, its scope probably excludes Functions, or it is set for a different deploy context. Env changes only reach functions after a new deploy.",
     },
     { headers: { "cache-control": "no-store" } },
   );

@@ -25,6 +25,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getStore } from "@netlify/blobs";
 import type { Config, Context } from "@netlify/functions";
 import { SYSTEM_PROMPT } from "./system-prompt.js";
+import { FILE_IDS } from "./file-ids.js";
 
 const MODEL = "claude-opus-5";
 
@@ -77,21 +78,24 @@ type SessionState = {
 };
 
 /**
- * Parquet + methodology file ids, uploaded once to the Files API.
- * data/file_ids.json is gitignored, so this comes from the environment.
+ * Parquet + methodology file ids. These ship committed in file-ids.ts, so no
+ * configuration is required. Set the FILE_IDS environment variable only to
+ * point at a different set of uploads without redeploying code.
  */
 function loadFileIds(): Record<string, string> {
-  const raw = process.env.FILE_IDS;
-  if (!raw) {
-    throw new Error(
-      "FILE_IDS is not set. Paste the contents of data/file_ids.json into the " +
-        "FILE_IDS environment variable in Netlify.",
-    );
-  }
+  const raw = process.env.FILE_IDS?.trim();
+  if (!raw) return FILE_IDS;
+
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const count = Object.keys(parsed).length;
+    if (count === 0) return FILE_IDS;
+    return parsed;
   } catch {
-    throw new Error("FILE_IDS is set but is not valid JSON.");
+    throw new Error(
+      "FILE_IDS is set but is not valid JSON. Remove the variable to use the " +
+        "ids committed in file-ids.ts, or fix the JSON.",
+    );
   }
 }
 
