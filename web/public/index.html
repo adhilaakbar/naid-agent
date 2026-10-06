@@ -4,18 +4,48 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>NAID Research Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --bg: #0D1B2A;
-    --panel: #152838;
-    --header: #1B3A5E;
-    --gold: #C9A14A;
-    --text: #E8ECEF;
-    --muted: #8FA0B5;
-    --soft: #C5CDD6;
-    --border: #2A3F55;
-    --code-bg: #1F3548;
-    --code-fg: #F0D78C;
+    --paper: #FAF8F4;
+    --surface: #FFFFFF;
+    --ink: #1B2430;
+    --ink-2: #445061;
+    --muted: #7A8493;
+    --rule: #E2DDD3;
+    --rule-strong: #1B2430;
+    --accent: #1D4E7E;
+    --accent-soft: #EAF0F6;
+    --gold: #A8822F;
+    --code-bg: #F2EFE9;
+    --code-fg: #6B3E12;
+    --danger: #A33A2E;
+    --danger-soft: #FBEDEB;
+
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #12161C;
+      --surface: #181D25;
+      --ink: #E7E9EC;
+      --ink-2: #B6BDC7;
+      --muted: #8790A0;
+      --rule: #2A313C;
+      --rule-strong: #C9CED6;
+      --accent: #8FB6E0;
+      --accent-soft: #1C2633;
+      --gold: #D3AF62;
+      --code-bg: #1F252E;
+      --code-fg: #E8C98A;
+      --danger: #E58A7E;
+      --danger-soft: #2A1C1B;
+    }
   }
 
   * { box-sizing: border-box; }
@@ -26,38 +56,59 @@
 
   body {
     margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: Helvetica, Arial, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
     font-size: 15px;
-    line-height: 1.65;
+    line-height: 1.6;
     display: flex;
     flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  /* ---- Header ---- */
+  ::selection { background: var(--accent-soft); }
+
+  /* ---- Masthead ---- */
   header.banner {
     flex: none;
-    background: var(--header);
-    border-bottom: 3px solid var(--gold);
-    padding: 16px 32px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
   }
-  .banner-inner { max-width: 1200px; margin: 0 auto; }
+  .banner-inner {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 18px 32px 16px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
   .banner h1 {
     margin: 0;
-    font-family: Georgia, 'Times New Roman', serif;
-    font-size: 23px;
+    font-family: var(--serif);
+    font-size: 26px;
     font-weight: 600;
-    line-height: 1.2;
-    color: #fff;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    color: var(--ink);
   }
   .banner .sub {
-    margin-top: 4px;
-    color: var(--gold);
-    font-size: 10.5px;
-    letter-spacing: 2.5px;
+    color: var(--muted);
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    font-weight: 500;
+    font-weight: 600;
+  }
+  /* Thin double rule under the masthead, journal style. */
+  header.banner::after {
+    content: "";
+    display: block;
+    height: 3px;
+    border-top: 2px solid var(--rule-strong);
+    border-bottom: 1px solid var(--rule-strong);
+    opacity: .9;
   }
 
   /* ---- Layout ---- */
@@ -67,76 +118,105 @@
     flex: 1;
     min-height: 0;
     width: 100%;
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 290px 1fr;
-    gap: 24px;
-    padding: 16px 32px;
+    grid-template-columns: 280px 1fr;
+    gap: 0;
+    padding: 0 32px;
     overflow: hidden;
   }
 
   aside {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 18px;
+    padding: 26px 28px 26px 0;
+    border-right: 1px solid var(--rule);
     min-height: 0;
     /* Sized to fit a normal viewport; scrolls internally on short screens
        rather than being clipped. */
     overflow-y: auto;
     scrollbar-width: thin;
   }
-  aside h2 {
-    font-family: Georgia, serif;
-    color: var(--gold);
-    font-size: 20px;
-    margin: 0 0 10px;
-    border-bottom: 2px solid var(--gold);
-    padding-bottom: 8px;
-  }
-  aside h3 {
-    color: var(--gold);
-    font-family: Georgia, serif;
-    font-size: 13px;
+  aside h2, aside h3 {
+    font-family: var(--sans);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1.2px;
-    margin: 22px 0 8px;
+    letter-spacing: 0.14em;
+    margin: 0 0 10px;
   }
-  aside p, aside li { color: var(--soft); font-size: 13px; }
-  aside strong { color: var(--text); }
-  aside hr { border: 0; border-top: 1px solid var(--border); margin: 18px 0; }
+  aside h3 { margin-top: 0; }
+  aside p, aside li { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; }
+  aside > p:first-of-type {
+    font-family: var(--serif);
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  aside strong {
+    display: inline-block;
+    color: var(--ink);
+    font-weight: 600;
+    margin-bottom: 1px;
+  }
+  aside hr { border: 0; border-top: 1px solid var(--rule); margin: 22px 0; }
+
   .example {
-    display: block;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
     width: 100%;
     text-align: left;
     background: transparent;
-    color: var(--gold);
-    border: 1px solid var(--gold);
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.3;
-    padding: 8px 12px;
-    margin-bottom: 8px;
+    color: var(--accent);
+    border: 0;
+    border-top: 1px solid var(--rule);
+    border-radius: 0;
+    font-family: var(--serif);
+    font-size: 14.5px;
+    line-height: 1.4;
+    padding: 10px 2px;
+    margin: 0;
     cursor: pointer;
-    font-family: inherit;
+    transition: background .15s, color .15s;
   }
-  .example:hover { background: var(--gold); color: var(--bg); }
+  .example:last-of-type { border-bottom: 1px solid var(--rule); }
+  .example::after {
+    content: "→";
+    margin-left: auto;
+    font-family: var(--sans);
+    color: var(--muted);
+    transition: transform .15s, color .15s;
+  }
+  .example:hover:not(:disabled) { background: var(--accent-soft); padding-left: 8px; padding-right: 8px; }
+  .example:hover:not(:disabled)::after { color: var(--accent); transform: translateX(2px); }
+  .example:focus-visible, .reset:focus-visible, button.send:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
   .example:disabled { opacity: .45; cursor: not-allowed; }
+
   .reset {
     width: 100%;
     background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 4px;
+    color: var(--ink-2);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: 13.5px;
+    font-weight: 500;
     cursor: pointer;
-    font-family: inherit;
+    font-family: var(--sans);
+    transition: border-color .15s, color .15s;
   }
-  .reset:hover { border-color: var(--gold); color: var(--gold); }
-  .note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .reset:hover { border-color: var(--ink-2); color: var(--ink); }
+  .note {
+    color: var(--muted);
+    font-size: 12.5px !important;
+    line-height: 1.55;
+    font-style: italic;
+    font-family: var(--serif);
+  }
 
   /* ---- Chat column ---- */
   .chatcol {
@@ -144,170 +224,290 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+    padding-left: 40px;
   }
   main {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding-right: 6px;
+    padding: 28px 12px 8px 0;
     scrollbar-width: thin;
   }
+  /* Keep answers at a comfortable reading measure. */
+  main > * { max-width: 760px; }
+
+  /* Empty state before the first question. */
+  main:empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  main:empty::before {
+    content: "Ask a question below, or choose one of the suggested questions.";
+    max-width: 360px;
+    text-align: center;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 17px;
+    color: var(--muted);
+  }
+
   .msg {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 16px 20px;
-    margin-bottom: 16px;
+    padding: 0 0 22px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--rule);
     overflow-wrap: anywhere;
   }
-  .msg.user { border-left: 3px solid var(--gold); }
+  .msg:last-child { border-bottom: 0; }
   .role {
     font-size: 11px;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--gold);
-    margin-bottom: 8px;
-    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 700;
   }
-  .status { color: var(--muted); font-style: italic; }
+  .msg.assistant .role { color: var(--gold); }
+  .msg.user { border-bottom: 0; padding-bottom: 0; margin-bottom: 18px; }
+  .msg.user .body {
+    font-family: var(--serif);
+    font-size: 19px;
+    line-height: 1.45;
+    font-weight: 600;
+    color: var(--ink);
+    padding-left: 14px;
+    border-left: 2px solid var(--accent);
+  }
+  .status { color: var(--muted); font-size: 14px; font-style: italic; }
+  .status:empty { display: none; }
+  .msg.assistant .status:not(:empty)::before {
+    content: "";
+    display: inline-block;
+    width: 7px; height: 7px;
+    margin-right: 8px;
+    border-radius: 50%;
+    background: var(--gold);
+    vertical-align: 1px;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .msg.assistant .status:not(:empty)::before { animation: none; }
+  }
   .status .code {
     display: block;
-    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-family: var(--mono);
     font-size: 12.5px;
     color: var(--code-fg);
     background: var(--code-bg);
     border-radius: 3px;
-    padding: 4px 8px;
-    margin: 6px 0;
+    padding: 6px 10px;
+    margin: 8px 0;
     font-style: normal;
     overflow-x: auto;
     white-space: pre;
   }
   .err {
-    border-left: 3px solid #C25B4E;
-    color: #F0B4AC;
+    background: var(--danger-soft);
+    border: 0;
+    border-left: 3px solid var(--danger);
+    color: var(--danger);
+    padding: 12px 16px;
+    font-size: 14px;
   }
 
-  /* Markdown output */
-  .body h1, .body h2, .body h3 {
-    font-family: Georgia, serif;
-    color: var(--gold);
-    margin: 18px 0 8px;
-    line-height: 1.3;
+  /* Markdown output — set like a paper. */
+  .msg.assistant .body {
+    font-family: var(--serif);
+    font-size: 16.5px;
+    line-height: 1.68;
+    color: var(--ink);
   }
-  .body h1 { font-size: 21px; }
-  .body h2 { font-size: 18px; }
-  .body h3 { font-size: 15px; text-transform: uppercase; letter-spacing: 1px; }
-  .body p { margin: 0 0 12px; }
-  .body ul, .body ol { margin: 0 0 12px; padding-left: 22px; }
-  .body li { margin-bottom: 4px; }
+  .body h1, .body h2, .body h3 {
+    font-family: var(--serif);
+    color: var(--ink);
+    margin: 26px 0 10px;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  .body > :first-child { margin-top: 0; }
+  .body h1 { font-size: 23px; }
+  .body h2 { font-size: 19.5px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  .body h3 {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    color: var(--ink-2);
+  }
+  .body p { margin: 0 0 14px; }
+  .body ul, .body ol { margin: 0 0 14px; padding-left: 24px; }
+  .body li { margin-bottom: 5px; }
+  .body li::marker { color: var(--muted); }
+  .body strong { font-weight: 600; }
   .body code {
     background: var(--code-bg);
     color: var(--code-fg);
-    padding: 2px 6px;
+    padding: 1px 5px;
     border-radius: 3px;
-    font-family: ui-monospace, Menlo, Consolas, monospace;
-    font-size: 13px;
+    font-family: var(--mono);
+    font-size: 0.82em;
   }
   .body pre {
     background: var(--code-bg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--rule);
     border-radius: 4px;
     padding: 12px 14px;
     overflow-x: auto;
-    margin: 0 0 12px;
+    margin: 0 0 14px;
+    line-height: 1.5;
   }
   .body pre code { background: none; padding: 0; }
-  .body a { color: var(--gold); }
-  .table-wrap { overflow-x: auto; margin: 0 0 12px; }
-  .body table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  .body a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+  .body a:hover { text-decoration-thickness: 2px; }
+
+  /* Tables in booktabs style: heavy top and bottom rules, light midrule,
+     no vertical lines. */
+  .table-wrap { overflow-x: auto; margin: 4px 0 18px; }
+  .body table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    border-top: 2px solid var(--rule-strong);
+    border-bottom: 2px solid var(--rule-strong);
+  }
   .body th, .body td {
-    border: 1px solid var(--border);
-    padding: 7px 10px;
+    padding: 8px 12px;
     text-align: left;
+    vertical-align: top;
   }
-  .body th { background: var(--code-bg); color: var(--gold); font-weight: 600; }
+  .body th {
+    font-weight: 600;
+    color: var(--ink);
+    border-bottom: 1px solid var(--rule-strong);
+    white-space: nowrap;
+  }
+  .body tbody tr + tr td { border-top: 1px solid var(--rule); }
   .body blockquote {
-    border-left: 3px solid var(--border);
-    margin: 0 0 12px;
-    padding-left: 14px;
-    color: var(--soft);
+    border-left: 2px solid var(--gold);
+    margin: 0 0 14px;
+    padding: 2px 0 2px 16px;
+    color: var(--ink-2);
+    font-style: italic;
   }
-  .body img { max-width: 100%; border-radius: 4px; margin-top: 10px; }
-  .chart { max-width: 100%; border-radius: 4px; margin-top: 12px; display: block; }
+  .body img { max-width: 100%; border-radius: 2px; margin-top: 10px; }
+  .chart {
+    max-width: 100%;
+    margin-top: 16px;
+    display: block;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: #fff;
+    padding: 8px;
+  }
 
   /* ---- Composer ---- */
   /* Sits at the bottom of the chat column, not fixed to the viewport, so it
      never overlaps content and never needs a scroll offset. */
   .composer {
     flex: none;
-    padding-top: 14px;
+    padding: 12px 12px 22px 0;
   }
   form {
+    max-width: 760px;
     display: flex;
+    align-items: flex-end;
     gap: 10px;
-    background: var(--panel);
-    border: 1px solid var(--border);
+    background: var(--surface);
+    border: 1px solid var(--rule);
     border-radius: 6px;
-    padding: 10px;
+    padding: 8px 8px 8px 4px;
+    box-shadow: 0 1px 2px rgba(20, 30, 45, .04), 0 4px 16px rgba(20, 30, 45, .05);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  form:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
   textarea {
     flex: 1;
-    background: var(--code-bg);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 10px 12px;
-    font-family: inherit;
-    font-size: 15px;
+    background: transparent;
+    color: var(--ink);
+    border: 0;
+    padding: 9px 12px;
+    font-family: var(--sans);
+    font-size: 15.5px;
+    line-height: 1.5;
     resize: none;
-    min-height: 46px;
+    min-height: 42px;
     max-height: 160px;
   }
-  textarea:focus { outline: none; border-color: var(--gold); }
+  textarea::placeholder { color: var(--muted); }
+  textarea:focus { outline: none; }
   button.send {
-    background: var(--gold);
-    color: var(--bg);
+    flex: none;
+    background: var(--accent);
+    color: var(--surface);
     border: 0;
     border-radius: 4px;
+    height: 40px;
     padding: 0 22px;
-    font-weight: 700;
+    font-weight: 600;
     font-size: 14px;
+    letter-spacing: 0.02em;
     cursor: pointer;
-    font-family: inherit;
+    font-family: var(--sans);
+    transition: filter .15s;
   }
+  button.send:hover:not(:disabled) { filter: brightness(1.12); }
   button.send:disabled { opacity: .45; cursor: not-allowed; }
 
   /* Compress the sidebar on short screens so everything still fits without
      the page itself scrolling. */
   @media (max-height: 800px) {
-    aside { padding: 14px; font-size: 12.5px; }
-    aside h2 { font-size: 17px; margin-bottom: 6px; padding-bottom: 5px; }
-    aside h3 { margin: 14px 0 6px; }
-    aside p, aside li { font-size: 12px; }
-    aside hr { margin: 12px 0; }
-    .example { padding: 6px 10px; margin-bottom: 6px; font-size: 12px; }
-    header.banner { padding: 11px 32px; }
-    .banner h1 { font-size: 20px; }
+    aside { padding-top: 18px; padding-bottom: 18px; }
+    aside p, aside li { font-size: 13px; margin-bottom: 9px; }
+    aside > p:first-of-type { font-size: 14.5px; }
+    aside hr { margin: 15px 0; }
+    .example { padding: 7px 2px; font-size: 13.5px; }
+    .banner-inner { padding-top: 12px; padding-bottom: 11px; }
+    .banner h1 { font-size: 22px; }
   }
 
   /* Below the two-column breakpoint the page scrolls normally again — a
      fixed-viewport split does not work on a phone. */
   @media (max-width: 900px) {
     html, body { height: auto; overflow: auto; }
+    .banner-inner { padding: 14px 16px 12px; flex-direction: column; gap: 4px; }
+    .banner h1 { font-size: 22px; }
     .shell {
       grid-template-columns: 1fr;
-      padding: 16px 20px;
+      padding: 0 16px;
       overflow: visible;
       min-height: 0;
     }
-    aside { overflow: visible; }
-    main { overflow: visible; }
+    aside {
+      overflow: visible;
+      border-right: 0;
+      border-bottom: 1px solid var(--rule);
+      padding: 20px 0;
+    }
+    .chatcol { padding-left: 0; }
+    main { overflow: visible; padding: 20px 0 8px; }
+    main:empty { min-height: 120px; }
     .composer {
       position: sticky;
       bottom: 0;
-      background: var(--bg);
-      padding-bottom: 12px;
+      background: var(--paper);
+      padding: 10px 0 14px;
     }
   }
 </style>
@@ -337,10 +537,10 @@
 
     <hr />
     <h3>Try asking</h3>
-    <button class="example" data-q="Compare Texas and California on Latino GDP, Mexican-origin share of state GDP, and projected employment loss under JPM_sim03.">📊 Compare TX vs CA on deportation impact</button>
-    <button class="example" data-q="Make a bar chart of the top 10 US states by remittances to Mexico in 2023.">💸 Top 10 states by remittances</button>
-    <button class="example" data-q="Which US industries have the highest share of unauthorized foreign-born workers, and how do they fare under JPM_sim03?">🏗️ Most exposed sectors</button>
-    <button class="example" data-q="Explain how the GTAP labor database was built — sources, location quotients, and the simulation logic.">📚 What's the methodology?</button>
+    <button class="example" data-q="Compare Texas and California on Latino GDP, Mexican-origin share of state GDP, and projected employment loss under JPM_sim03.">Compare TX vs CA on deportation impact</button>
+    <button class="example" data-q="Make a bar chart of the top 10 US states by remittances to Mexico in 2023.">Top 10 states by remittances</button>
+    <button class="example" data-q="Which US industries have the highest share of unauthorized foreign-born workers, and how do they fare under JPM_sim03?">Most exposed sectors</button>
+    <button class="example" data-q="Explain how the GTAP labor database was built — sources, location quotients, and the simulation logic.">What's the methodology?</button>
 
     <hr />
     <button class="reset" id="reset">Reset conversation</button>
@@ -355,7 +555,7 @@
     <main id="chat"></main>
     <div class="composer">
       <form id="form">
-        <textarea id="input" rows="1" placeholder="Ask a question about US–Mexico economic integration..."></textarea>
+        <textarea id="input" rows="1" aria-label="Your question" placeholder="Ask a question about US–Mexico economic integration..."></textarea>
         <button class="send" id="send" type="submit">Send</button>
       </form>
     </div>
